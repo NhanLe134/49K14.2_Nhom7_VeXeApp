@@ -1,6 +1,7 @@
 package com.example.nhom7vexeapp;
 
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.os.Handler;
 import androidx.appcompat.app.AppCompatActivity;
@@ -11,8 +12,14 @@ public class SplashActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_splash);
 
+        // ÉP BUỘC đăng xuất mỗi khi khởi động lại app để bồ test luồng "Chưa đăng nhập"
+        SharedPreferences pref = getSharedPreferences("UserPrefs", MODE_PRIVATE);
+        SharedPreferences.Editor editor = pref.edit();
+        editor.putBoolean("isLoggedIn", false); 
+        editor.apply();
+
         new Handler().postDelayed(() -> {
-            // Mặc định luôn vào trang chủ khách hàng
+            // Luôn vào trang chủ (MainActivity)
             startActivity(new Intent(SplashActivity.this, MainActivity.class));
             finish();
         }, 1500);

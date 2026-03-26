@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <EditText
+        android:id="@+id/etRoute"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Tuyến xe (VD: Huế-Đà Nẵng)" />
+
+    <EditText
+        android:id="@+id/etDate"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Ngày (VD: 05-02-2025)" />
+
+    <EditText
+        android:id="@+id/etTime"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Giờ (VD: 6h00)" />
+
+    <EditText
+        android:id="@+id/etVehicle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Loại xe (VD: xe 4 chỗ)" />
+
+    <EditText
+        android:id="@+id/etPrice"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Giá (VD: 150K)" />
+
+    <Button
+        android:id="@+id/btnSave"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="20dp"
+        android:text="Lưu chuyến xe" />
+</LinearLayout>

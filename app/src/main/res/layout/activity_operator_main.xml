@@ -47,9 +47,15 @@
                 android:textSize="12sp" />
         </LinearLayout>
 
+        <!-- Thêm padding cho Avatar để dễ bấm hơn -->
         <ImageView
-            android:layout_width="32dp"
-            android:layout_height="32dp"
+            android:id="@+id/imgOpProfile"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:padding="8dp"
+            android:clickable="true"
+            android:focusable="true"
+            android:background="?attr/selectableItemBackgroundBorderless"
             android:src="@drawable/account_circle"
             app:tint="@color/white" />
     </LinearLayout>
@@ -296,6 +302,7 @@
         app:layout_constraintBottom_toBottomOf="parent">
 
         <LinearLayout
+            android:id="@+id/nav_home_op_main"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
@@ -317,6 +324,7 @@
         </LinearLayout>
 
         <LinearLayout
+            android:id="@+id/nav_driver_op"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
@@ -338,6 +346,7 @@
         </LinearLayout>
 
         <LinearLayout
+            android:id="@+id/nav_vehicle_op"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
@@ -359,6 +368,7 @@
         </LinearLayout>
 
         <LinearLayout
+            android:id="@+id/nav_trip_op"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
@@ -380,6 +390,7 @@
         </LinearLayout>
 
         <LinearLayout
+            android:id="@+id/nav_route_op"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
