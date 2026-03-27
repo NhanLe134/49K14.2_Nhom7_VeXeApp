@@ -85,6 +85,14 @@
             android:name=".EditOperatorProfileActivity"
             android:exported="false" />
 
+        <activity
+            android:name=".QLNhaxeActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".QLTuyenxeActivity"
+            android:exported="false" />
+
     </application>
 
 </manifest>
