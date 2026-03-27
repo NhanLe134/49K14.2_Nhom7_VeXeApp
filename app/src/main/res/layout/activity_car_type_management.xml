@@ -66,50 +66,123 @@
     <LinearLayout
         android:id="@+id/bottom_nav"
         android:layout_width="match_parent"
-        android:layout_height="75dp"
-        android:background="@color/white"
-        android:elevation="10dp"
+        android:layout_height="65dp"
+        android:background="@android:color/white"
+        android:elevation="8dp"
         android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:baselineAligned="false"
         app:layout_constraintBottom_toBottomOf="parent">
 
         <LinearLayout
+            android:id="@+id/nav_home_op"
             android:layout_width="0dp"
-            android:layout_height="match_parent"
+            android:layout_height="wrap_content"
             android:layout_weight="1"
             android:gravity="center"
+            android:clickable="true"
+            android:focusable="true"
+            android:background="?attr/selectableItemBackground"
             android:orientation="vertical">
             <ImageView
-                android:layout_width="26dp"
-                android:layout_height="26dp"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
                 android:src="@drawable/home"
-                app:tint="#555555"/>
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Trang chủ"
-                android:textColor="#555555"
-                android:textSize="11sp"/>
+                app:tint="#858383"/> <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Trang chủ"
+            android:textSize="10sp"
+            android:textColor="#858383" android:layout_marginTop="2dp"/>
         </LinearLayout>
 
         <LinearLayout
+            android:id="@+id/nav_driver_op"
             android:layout_width="0dp"
-            android:layout_height="match_parent"
+            android:layout_height="wrap_content"
             android:layout_weight="1"
             android:gravity="center"
+            android:clickable="true"
+            android:focusable="true"
+            android:background="?attr/selectableItemBackground"
             android:orientation="vertical">
             <ImageView
-                android:layout_width="26dp"
-                android:layout_height="26dp"
-                android:src="@drawable/ic_car"
-                app:tint="#0091D5"/> <TextView
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:src="@drawable/ic_driver"
+                app:tint="#858383" /> <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Loại xe"
-            android:textColor="#0091D5"
-            android:textSize="11sp"
-            android:textStyle="bold"/>
+            android:text="Tài xế"
+            android:textSize="10sp"
+            android:textColor="#858383" android:layout_marginTop="2dp" />
         </LinearLayout>
 
+        <LinearLayout
+            android:id="@+id/nav_vehicle_op"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:clickable="true"
+            android:focusable="true"
+            android:background="?attr/selectableItemBackground"
+            android:orientation="vertical">
+            <ImageView
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:src="@drawable/ic_car"
+                app:tint="#0091D5" /> <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Phương tiện"
+            android:textSize="10sp"
+            android:textColor="#0091D5" android:layout_marginTop="2dp" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/nav_trip_op"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:clickable="true"
+            android:focusable="true"
+            android:background="?attr/selectableItemBackground"
+            android:orientation="vertical">
+            <ImageView
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:src="@drawable/ic_map"
+                app:tint="#858383" /> <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Chuyến xe"
+            android:textSize="10sp"
+            android:textColor="#858383" android:layout_marginTop="2dp" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/nav_route_op"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:clickable="true"
+            android:focusable="true"
+            android:background="?attr/selectableItemBackground"
+            android:orientation="vertical">
+            <ImageView
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:src="@drawable/ic_route"
+                app:tint="#858383" /> <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Tuyến xe"
+            android:textSize="10sp"
+            android:textColor="#858383" android:layout_marginTop="2dp" />
+        </LinearLayout>
     </LinearLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>
