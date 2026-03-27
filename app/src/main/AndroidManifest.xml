@@ -21,30 +21,13 @@
             android:value="AIzaSyCjKLkqL_kcIQcltdubSO4SLD_VhDYbilo" />
 
         <activity
-            android:name=".SplashActivity"
+            android:name=".LoginActivity"
             android:exported="true" >
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-
-        <activity
-            android:name=".QLNhaxeActivity"
-            android:exported="true"/>
-
-        <activity
-            android:name=".CarTypeManagementActivity"
-            android:exported="true"
-            android:launchMode="singleTop"/>
-
-        <activity android:name=".PhuongTienManagementActivity"
-            android:exported="true"
-            android:launchMode="singleTop"/>
-
-        <activity
-            android:name=".LoginActivity"
-            android:exported="false" />
 
         <activity
             android:name=".MainActivity"
@@ -65,14 +48,6 @@
         <activity
             android:name=".TripDetailActivity"
             android:exported="false" />
-
-<!--        <activity-->
-<!--            android:name=".DriverSelectionActivity"-->
-<!--            android:exported="false" />-->
-
-<!--        <activity-->
-<!--            android:name=".RouteActivity"-->
-<!--            android:exported="false" />-->
 
         <activity
             android:name=".RegisterActivity"
@@ -99,7 +74,23 @@
             android:exported="false" />
 
         <activity
+            android:name=".QLNhaxeActivity"
+            android:exported="false" />
+
+        <activity
             android:name=".QLTuyenxeActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".QLVeXeActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".PhanHoiActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".CarTypeManagementActivity"
             android:exported="false" />
 
     </application>
