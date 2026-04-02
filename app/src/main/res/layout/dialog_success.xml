@@ -4,32 +4,31 @@
     android:layout_width="280dp"
     android:layout_height="wrap_content"
     app:cardCornerRadius="20dp"
-    app:cardElevation="5dp">
+    app:cardElevation="8dp">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:gravity="center"
         android:orientation="vertical"
-        android:paddingTop="25dp"
-        android:paddingBottom="25dp"
-        android:paddingLeft="15dp"
-        android:paddingRight="15dp">
+        android:padding="30dp">
 
         <ImageView
-            android:layout_width="45dp"
-            android:layout_height="45dp"
+            android:layout_width="60dp"
+            android:layout_height="60dp"
             android:src="@drawable/baseline_check_circle_outline_24"
-            app:tint="#00C853" />
+            app:tint="#4CAF50" />
 
         <TextView
+            android:id="@+id/tvMessage"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="15dp"
-            android:text="Thiết lập giá vé thành công"
-            android:textColor="#111827"
-            android:textSize="15sp"
-            android:textStyle="normal" />
+            android:layout_marginTop="20dp"
+            android:gravity="center"
+            android:text="Tạo chuyến xe thành công"
+            android:textColor="#000000"
+            android:textSize="16sp"
+            android:textStyle="bold" />
 
     </LinearLayout>
 </androidx.cardview.widget.CardView>

@@ -107,19 +107,35 @@ public class QLTuyenxeActivity extends AppCompatActivity implements RouteAdapter
 
     private void setupNavigation() {
         LinearLayout navHome = findViewById(R.id.nav_home_op_main);
-        LinearLayout navTrip = findViewById(R.id.nav_trip_op);
-        
         if (navHome != null) {
             navHome.setOnClickListener(v -> {
-                startActivity(new Intent(this, OperatorMainActivity.class));
-                finish();
+                Intent intent = new Intent(this, OperatorMainActivity.class);
+                intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+                startActivity(intent);
             });
         }
-        
+
+        LinearLayout navVehicle = findViewById(R.id.nav_vehicle_op);
+        if (navVehicle != null) {
+            navVehicle.setOnClickListener(v -> {
+                Intent intent = new Intent(this, PhuongTienManagementActivity.class);
+                startActivity(intent);
+            });
+        }
+
+        LinearLayout navTrip = findViewById(R.id.nav_trip_op);
         if (navTrip != null) {
             navTrip.setOnClickListener(v -> {
-                startActivity(new Intent(this, TripListActivity.class));
-                finish();
+                Intent intent = new Intent(this, TripListActivity.class);
+                startActivity(intent);
+            });
+        }
+
+        LinearLayout navDriver = findViewById(R.id.nav_driver_op);
+        if (navDriver != null) {
+            navDriver.setOnClickListener(v -> {
+                Intent intent = new Intent(this, QLNhaxeActivity.class);
+                startActivity(intent);
             });
         }
     }

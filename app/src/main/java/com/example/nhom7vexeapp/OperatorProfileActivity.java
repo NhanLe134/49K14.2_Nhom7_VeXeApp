@@ -3,6 +3,7 @@ package com.example.nhom7vexeapp;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
+import android.view.View;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
@@ -24,17 +25,10 @@ public class OperatorProfileActivity extends AppCompatActivity {
 
         initViews();
         loadOperatorData();
+        setupBottomNavigation();
 
         // Nút Back ở Header
         btnBack.setOnClickListener(v -> finish());
-
-        // Nút Home ở Bottom Nav - Quay lại trang chủ
-        navHome.setOnClickListener(v -> {
-            Intent intent = new Intent(this, OperatorMainActivity.class);
-            intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
-            startActivity(intent);
-            finish();
-        });
 
         btnEdit.setOnClickListener(v -> {
             Intent intent = new Intent(this, EditOperatorProfileActivity.class);
@@ -67,6 +61,54 @@ public class OperatorProfileActivity extends AppCompatActivity {
         btnEdit = findViewById(R.id.btnEditOpProfile);
         btnLogout = findViewById(R.id.btnLogoutOp);
         navHome = findViewById(R.id.navHomeProfile);
+    }
+
+    private void setupBottomNavigation() {
+        // Nút Home
+        if (navHome != null) {
+            navHome.setOnClickListener(v -> {
+                Intent intent = new Intent(this, OperatorMainActivity.class);
+                intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+                startActivity(intent);
+                finish();
+            });
+        }
+
+        // Nút Phương tiện
+        View navVehicle = findViewById(R.id.nav_vehicle_op);
+        if (navVehicle != null) {
+            navVehicle.setOnClickListener(v -> {
+                Intent intent = new Intent(this, PhuongTienManagementActivity.class);
+                startActivity(intent);
+            });
+        }
+
+        // Nút Chuyến xe
+        View navTrip = findViewById(R.id.nav_trip_op);
+        if (navTrip != null) {
+            navTrip.setOnClickListener(v -> {
+                Intent intent = new Intent(this, TripListActivity.class);
+                startActivity(intent);
+            });
+        }
+
+        // Nút Tuyến xe
+        View navRoute = findViewById(R.id.nav_route_op);
+        if (navRoute != null) {
+            navRoute.setOnClickListener(v -> {
+                Intent intent = new Intent(this, QLTuyenxeActivity.class);
+                startActivity(intent);
+            });
+        }
+
+        // Nút Tài xế
+        View navDriver = findViewById(R.id.nav_driver_op);
+        if (navDriver != null) {
+            navDriver.setOnClickListener(v -> {
+                Intent intent = new Intent(this, QLNhaxeActivity.class);
+                startActivity(intent);
+            });
+        }
     }
 
     private void loadOperatorData() {

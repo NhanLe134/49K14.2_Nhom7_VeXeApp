@@ -22,6 +22,28 @@ public class OperatorMainActivity extends AppCompatActivity {
             });
         }
 
+        // Bottom Navigation
+        setupBottomNavigation();
+    }
+
+    private void setupBottomNavigation() {
+        // Trang chủ (Chính là màn này)
+        LinearLayout navHome = findViewById(R.id.nav_home_op_main);
+        if (navHome != null) {
+            navHome.setOnClickListener(v -> {
+                // Đang ở trang chủ rồi, không cần làm gì hoặc reload
+            });
+        }
+
+        // Phương tiện navigation
+        LinearLayout navVehicle = findViewById(R.id.nav_vehicle_op);
+        if (navVehicle != null) {
+            navVehicle.setOnClickListener(v -> {
+                Intent intent = new Intent(OperatorMainActivity.this, PhuongTienManagementActivity.class);
+                startActivity(intent);
+            });
+        }
+
         // Chuyến xe navigation
         LinearLayout navTrip = findViewById(R.id.nav_trip_op);
         if (navTrip != null) {
@@ -36,6 +58,16 @@ public class OperatorMainActivity extends AppCompatActivity {
         if (navRoute != null) {
             navRoute.setOnClickListener(v -> {
                 Intent intent = new Intent(OperatorMainActivity.this, QLTuyenxeActivity.class);
+                startActivity(intent);
+            });
+        }
+
+        // Tài xế navigation (Nếu có màn hình quản lý tài xế, hiện tại chưa thấy rõ activity nào chuyên biệt)
+        LinearLayout navDriver = findViewById(R.id.nav_driver_op);
+        if (navDriver != null) {
+            navDriver.setOnClickListener(v -> {
+                // Tạm thời dẫn tới QLNhaxe hoặc thông báo tính năng đang phát triển
+                Intent intent = new Intent(OperatorMainActivity.this, QLNhaxeActivity.class);
                 startActivity(intent);
             });
         }

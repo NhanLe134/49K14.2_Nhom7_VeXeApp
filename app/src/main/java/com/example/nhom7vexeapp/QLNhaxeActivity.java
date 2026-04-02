@@ -33,7 +33,7 @@ public class QLNhaxeActivity extends AppCompatActivity {
 
         initViews();
         setupEvents();
-        setupNavigation();
+        setupBottomNavigation();
         // Giả lập load dữ liệu ban đầu
         loadInitialData();
     }
@@ -90,23 +90,41 @@ public class QLNhaxeActivity extends AppCompatActivity {
         });
     }
 
-    private void setupNavigation() {
-        LinearLayout navRoute = findViewById(R.id.nav_route_op);
-        if (navRoute != null) {
-            navRoute.setOnClickListener(v -> {
-                Intent intent = new Intent(this, QLTuyenxeActivity.class);
-                startActivity(intent);
-            });
-        }
-        
-        LinearLayout navHome = findViewById(R.id.nav_home_op);
-        if (navHome == null) {
-            navHome = findViewById(R.id.nav_home_op_main);
-        }
+    private void setupBottomNavigation() {
+        // Home
+        View navHome = findViewById(R.id.nav_home_op);
+        if (navHome == null) navHome = findViewById(R.id.nav_home_op_main);
         if (navHome != null) {
             navHome.setOnClickListener(v -> {
                 Intent intent = new Intent(this, OperatorMainActivity.class);
                 intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+                startActivity(intent);
+            });
+        }
+
+        // Vehicle
+        View navVehicle = findViewById(R.id.nav_vehicle_op);
+        if (navVehicle != null) {
+            navVehicle.setOnClickListener(v -> {
+                Intent intent = new Intent(this, PhuongTienManagementActivity.class);
+                startActivity(intent);
+            });
+        }
+
+        // Trip
+        View navTrip = findViewById(R.id.nav_trip_op);
+        if (navTrip != null) {
+            navTrip.setOnClickListener(v -> {
+                Intent intent = new Intent(this, TripListActivity.class);
+                startActivity(intent);
+            });
+        }
+
+        // Route
+        View navRoute = findViewById(R.id.nav_route_op);
+        if (navRoute != null) {
+            navRoute.setOnClickListener(v -> {
+                Intent intent = new Intent(this, QLTuyenxeActivity.class);
                 startActivity(intent);
             });
         }
