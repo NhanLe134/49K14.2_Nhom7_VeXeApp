@@ -3,6 +3,7 @@ package com.example.nhom7vexeapp;
 import android.content.Intent;
 import android.os.Bundle;
 import android.widget.Button;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
@@ -35,14 +36,67 @@ public class TripListActivity extends AppCompatActivity implements TripAdapter.O
         rvTrips.setAdapter(adapter);
 
         Button btnCreateTrip = findViewById(R.id.btnCreateTrip);
-        btnCreateTrip.setOnClickListener(v -> {
-            Intent intent = new Intent(TripListActivity.this, CreateTripActivity.class);
-            startActivityForResult(intent, 100);
-        });
+        if (btnCreateTrip != null) {
+            btnCreateTrip.setOnClickListener(v -> {
+                Intent intent = new Intent(TripListActivity.this, CreateTripActivity.class);
+                startActivityForResult(intent, 100);
+            });
+        }
 
-        findViewById(R.id.nav_home).setOnClickListener(v -> {
-            onBackPressed();
-        });
+        // Fix: nav_home was removed from layout in previous update
+        ImageView imgLogo = findViewById(R.id.imgLogo);
+        if (imgLogo != null) {
+            imgLogo.setOnClickListener(v -> {
+                Intent intent = new Intent(this, OperatorMainActivity.class);
+                intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+                startActivity(intent);
+            });
+        }
+
+        ImageView btnProfile = findViewById(R.id.imgOpProfile);
+        if (btnProfile != null) {
+            btnProfile.setOnClickListener(v -> {
+                Intent intent = new Intent(this, OperatorProfileActivity.class);
+                startActivity(intent);
+            });
+        }
+
+        setupBottomNavigation();
+    }
+
+    private void setupBottomNavigation() {
+        LinearLayout navHome = findViewById(R.id.nav_home_op_main);
+        if (navHome != null) {
+            navHome.setOnClickListener(v -> {
+                Intent intent = new Intent(this, OperatorMainActivity.class);
+                intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+                startActivity(intent);
+            });
+        }
+
+        LinearLayout navVehicle = findViewById(R.id.nav_vehicle_op);
+        if (navVehicle != null) {
+            navVehicle.setOnClickListener(v -> {
+                Intent intent = new Intent(this, PhuongTienManagementActivity.class);
+                startActivity(intent);
+            });
+        }
+
+        LinearLayout navRoute = findViewById(R.id.nav_route_op);
+        if (navRoute != null) {
+            navRoute.setOnClickListener(v -> {
+                Intent intent = new Intent(this, QLTuyenxeActivity.class);
+                startActivity(intent);
+            });
+        }
+        
+        LinearLayout navDriver = findViewById(R.id.nav_driver_op);
+        if (navDriver != null) {
+            navDriver.setOnClickListener(v -> {
+                Intent intent = new Intent(this, QLNhaxeActivity.class);
+                startActivity(intent);
+            });
+        }
     }
 
     @Override
@@ -55,10 +109,15 @@ public class TripListActivity extends AppCompatActivity implements TripAdapter.O
 
     @Override
     public void onClick(Trip trip, int position) {
-        Intent intent = new Intent(this, TripDetailActivity.class);
-        intent.putExtra("trip", trip);
-        intent.putExtra("position", position);
-        startActivityForResult(intent, 102);
+        // Just in case TripDetailActivity is problematic, we wrap it
+        try {
+            Intent intent = new Intent(this, TripDetailActivity.class);
+            intent.putExtra("trip", trip);
+            intent.putExtra("position", position);
+            startActivityForResult(intent, 102);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     @Override

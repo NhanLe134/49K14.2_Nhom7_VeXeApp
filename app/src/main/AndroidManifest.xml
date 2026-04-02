@@ -31,10 +31,15 @@
             </intent-filter>
         </activity>
 
+        <activity android:name=".SearchTicketActivity"
+            android:exported="false" />
+        <activity
+            android:name="com.example.nhom7vexeapp.VeResultsActivity"
+            android:exported="false" />
+
         <activity
             android:name=".DatVeActivity"
             android:exported="false" />
-
         <activity
             android:name=".ThongTinChiTietActivity"
             android:exported="false" />
@@ -50,6 +55,10 @@
         <activity
             android:name=".OperatorMainActivity"
             android:exported="false" />
+        <activity android:name=".PhuongTienManagementActivity"
+            android:exported="false" />
+        <activity android:name=".CarTypeManagementActivity"
+            android:exported="false" />
 
         <activity
             android:name=".TripListActivity"
@@ -61,6 +70,10 @@
 
         <activity
             android:name=".TripDetailActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".DriverSelectionActivity"
             android:exported="false" />
 
         <activity
@@ -103,18 +116,12 @@
             android:name=".PhanHoiActivity"
             android:exported="false" />
 
-        <activity
-            android:name=".CarTypeManagementActivity"
-            android:exported="false" />
 
         <activity
             android:name=".VietNhanXetActivity"
             android:exported="false"
             android:windowSoftInputMode="adjustPan" />
 
-        <activity
-            android:name=".PhuongTienManagementActivity"
-            android:exported="false" />
     </application>
 
 </manifest>
