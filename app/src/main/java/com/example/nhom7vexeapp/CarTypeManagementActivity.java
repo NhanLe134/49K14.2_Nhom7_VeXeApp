@@ -29,20 +29,18 @@ public class CarTypeManagementActivity extends AppCompatActivity {
         initViews();
         setupRecyclerView();
         setupEvents();
-        setupBottomNav(); // Thêm phần điều hướng dưới cùng
+        setupBottomNav(); 
     }
 
     private void initViews() {
-
         rvCarTypes = findViewById(R.id.rvCarTypes);
         btnBack = findViewById(R.id.btnBack);
+        if (btnBack == null) btnBack = findViewById(R.id.btnProfile); // In layout it's btnProfile but acting as back/profile
     }
 
     private void setupEvents() {
-        // KÍCH HOẠT NÚT BACK: Bấm là về lại màn hình Quản lý Phương tiện
         if (btnBack != null) {
             btnBack.setOnClickListener(v -> {
-                // finish() sẽ đóng màn hình hiện tại và lộ ra màn hình nằm ngay dưới nó
                 finish();
             });
         }
@@ -50,7 +48,6 @@ public class CarTypeManagementActivity extends AppCompatActivity {
 
     private void setupRecyclerView() {
         carTypeList = new ArrayList<>();
-        // Giả lập dữ liệu như cũ của Xù
         carTypeList.add(new CarType("Loại xe A", 4, "150.000 đ", "27/03/2026", 0xFF0098D6));
         carTypeList.add(new CarType("Loại xe B", 7, "200.000 đ", "26/03/2026", 0xFF4CAF50));
         carTypeList.add(new CarType("Loại xe C", 9, "Chưa thiết lập", "Chưa cập nhật", 0xFF9C27B0));
@@ -61,23 +58,45 @@ public class CarTypeManagementActivity extends AppCompatActivity {
     }
 
     private void setupBottomNav() {
-        // Ánh xạ các nút ở thanh Bottom Nav (Xù nhớ kiểm tra ID trong XML nhé)
         LinearLayout navHome = findViewById(R.id.nav_home_op);
-        LinearLayout navVehicle = findViewById(R.id.nav_vehicle_op);
-
-        // Bấm vào Trang chủ -> Về màn hình chính nhà xe
         if (navHome != null) {
             navHome.setOnClickListener(v -> {
-                Intent intent = new Intent(this, QLNhaxeActivity.class);
+                Intent intent = new Intent(this, OperatorMainActivity.class);
                 intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
                 startActivity(intent);
             });
         }
 
-        // Bấm vào Phương tiện -> Về lại màn hình chọn trung gian
+        LinearLayout navVehicle = findViewById(R.id.nav_vehicle_op);
         if (navVehicle != null) {
             navVehicle.setOnClickListener(v -> {
-                finish(); // Vì màn hình trung gian đang nằm ngay dưới nên chỉ cần finish
+                Intent intent = new Intent(this, PhuongTienManagementActivity.class);
+                intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+                startActivity(intent);
+            });
+        }
+
+        LinearLayout navTrip = findViewById(R.id.nav_trip_op);
+        if (navTrip != null) {
+            navTrip.setOnClickListener(v -> {
+                Intent intent = new Intent(this, TripListActivity.class);
+                startActivity(intent);
+            });
+        }
+
+        LinearLayout navRoute = findViewById(R.id.nav_route_op);
+        if (navRoute != null) {
+            navRoute.setOnClickListener(v -> {
+                Intent intent = new Intent(this, QLTuyenxeActivity.class);
+                startActivity(intent);
+            });
+        }
+
+        LinearLayout navDriver = findViewById(R.id.nav_driver_op);
+        if (navDriver != null) {
+            navDriver.setOnClickListener(v -> {
+                Intent intent = new Intent(this, QLNhaxeActivity.class);
+                startActivity(intent);
             });
         }
     }

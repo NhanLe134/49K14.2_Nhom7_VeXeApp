@@ -1,8 +1,12 @@
 package com.example.nhom7vexeapp;
 
 import android.content.Intent;
+import android.graphics.Color;
+import android.graphics.drawable.ColorDrawable;
 import android.os.Bundle;
+import android.os.Handler;
 import android.text.TextUtils;
+import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
@@ -20,12 +24,10 @@ public class QLNhaxeActivity extends AppCompatActivity {
     private TextView txtToolbarTitle, txtFileName;
     private TextView tvViewBusName, tvViewRepName, tvViewAddress, tvViewPhone, tvViewEmail;
     private EditText edtBusName, edtRepName, edtAddress, edtPhone;
+    private TextView tvErrorBusName, tvErrorRepName, tvErrorAddress, tvErrorPhone;
     private Button btnEdit, btnSave, btnCancel, btnChooseFile;
     private ImageView btnBack;
     private ImageView imgLogo, imgViewBanner, imgEditPreview;
-
-    // Biến của Xù để điều hướng Phương tiện
-    private LinearLayout navVehicle;
 
     private boolean isEditing = false;
 
@@ -34,22 +36,17 @@ public class QLNhaxeActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_ql_nhaxe);
 
-        initViews();       // Ánh xạ
-        setupEvents();      // Sự kiện chỉnh sửa/lưu
-        setupNavigation();  // Sự kiện thanh Navbar (Quan trọng)
-        loadInitialData();  // Load dữ liệu mẫu
+        initViews();
+        setupEvents();
+        setupBottomNavigation();
+        loadInitialData();
     }
 
     private void initViews() {
-        // Toolbar
         btnBack = findViewById(R.id.btnBack);
         txtToolbarTitle = findViewById(R.id.txtToolbarTitle);
-
-        // Layout modes
         layoutViewMode = findViewById(R.id.layoutViewMode);
         layoutEditMode = findViewById(R.id.layoutEditMode);
-
-        // View Mode components
         tvViewBusName = findViewById(R.id.tvViewBusName);
         tvViewRepName = findViewById(R.id.tvViewRepName);
         tvViewAddress = findViewById(R.id.tvViewAddress);
@@ -57,69 +54,77 @@ public class QLNhaxeActivity extends AppCompatActivity {
         tvViewEmail = findViewById(R.id.tvViewEmail);
         btnEdit = findViewById(R.id.btnEdit);
         imgViewBanner = findViewById(R.id.imgViewBanner);
-
-        // Edit Mode components
+        
         edtBusName = findViewById(R.id.edtBusName);
         edtRepName = findViewById(R.id.edtRepName);
         edtAddress = findViewById(R.id.edtAddress);
         edtPhone = findViewById(R.id.edtPhone);
+
+        tvErrorBusName = findViewById(R.id.tvErrorBusName);
+        tvErrorRepName = findViewById(R.id.tvErrorRepName);
+        tvErrorAddress = findViewById(R.id.tvErrorAddress);
+        tvErrorPhone = findViewById(R.id.tvErrorPhone);
+
         btnSave = findViewById(R.id.btnSave);
         btnCancel = findViewById(R.id.btnCancel);
         btnChooseFile = findViewById(R.id.btnChooseFile);
         txtFileName = findViewById(R.id.txtFileName);
         imgEditPreview = findViewById(R.id.imgEditPreview);
-
-        // Ánh xạ nút Phương tiện
-        navVehicle = findViewById(R.id.nav_vehicle_op);
     }
 
     private void setupEvents() {
         btnBack.setOnClickListener(v -> {
-            if (isEditing) showCancelConfirmationDialog();
-            else finish();
+            if (isEditing) {
+                showCancelConfirmationDialog();
+            } else {
+                finish();
+            }
         });
 
         btnEdit.setOnClickListener(v -> enterEditMode());
-
         btnCancel.setOnClickListener(v -> showCancelConfirmationDialog());
-
         btnSave.setOnClickListener(v -> validateAndSave());
-
         btnChooseFile.setOnClickListener(v -> {
             txtFileName.setText("banner_nhaxe.png");
             Toast.makeText(this, "Đã chọn ảnh thành công", Toast.LENGTH_SHORT).show();
         });
     }
 
-    private void setupNavigation() {
-        // 1. Xử lý nút Phương tiện của Xù (Dùng v.getContext() để không bị lỗi luồng)
-        if (navVehicle != null) {
-            navVehicle.setOnClickListener(v -> {
-                Intent intent = new Intent(v.getContext(), PhuongTienManagementActivity.class);
-                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                v.getContext().startActivity(intent);
-                android.util.Log.d("XU_LOG", "Da bam mo màn hình Phuong Tien!");
-            });
-        }
-
-        // 2. Xử lý nút Tuyến xe (Code của bạn nhóm)
-        LinearLayout navRoute = findViewById(R.id.nav_route_op);
-        if (navRoute != null) {
-            navRoute.setOnClickListener(v -> {
-                Intent intent = new Intent(this, QLTuyenxeActivity.class);
-                startActivity(intent);
-            });
-        }
-
-        // 3. Xử lý nút Trang chủ (Quay lại OperatorMain)
-        LinearLayout navHome = findViewById(R.id.nav_home_op);
-        if (navHome == null) {
-            navHome = findViewById(R.id.nav_home_op_main);
-        }
+    private void setupBottomNavigation() {
+        // Home
+        View navHome = findViewById(R.id.nav_home_op);
+        if (navHome == null) navHome = findViewById(R.id.nav_home_op_main);
         if (navHome != null) {
             navHome.setOnClickListener(v -> {
                 Intent intent = new Intent(this, OperatorMainActivity.class);
                 intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+                startActivity(intent);
+            });
+        }
+
+        // Vehicle
+        View navVehicle = findViewById(R.id.nav_vehicle_op);
+        if (navVehicle != null) {
+            navVehicle.setOnClickListener(v -> {
+                Intent intent = new Intent(this, PhuongTienManagementActivity.class);
+                startActivity(intent);
+            });
+        }
+
+        // Trip
+        View navTrip = findViewById(R.id.nav_trip_op);
+        if (navTrip != null) {
+            navTrip.setOnClickListener(v -> {
+                Intent intent = new Intent(this, TripListActivity.class);
+                startActivity(intent);
+            });
+        }
+
+        // Route
+        View navRoute = findViewById(R.id.nav_route_op);
+        if (navRoute != null) {
+            navRoute.setOnClickListener(v -> {
+                Intent intent = new Intent(this, QLTuyenxeActivity.class);
                 startActivity(intent);
             });
         }
@@ -128,7 +133,7 @@ public class QLNhaxeActivity extends AppCompatActivity {
     private void loadInitialData() {
         String name = "Nhà xe Đà Nẵng-Huế";
         String rep = "Tôn Thất Huy Phong";
-        String address = "K36/12 Lưu Quang Thuận, Đà Nẵng";
+        String address = "K36/1 Lưu Quang Thuận, Đà Nẵng";
         String phone = "0905509767";
         String email = "dananghue@nhaxe.vn";
 
@@ -149,6 +154,7 @@ public class QLNhaxeActivity extends AppCompatActivity {
         layoutViewMode.setVisibility(View.GONE);
         layoutEditMode.setVisibility(View.VISIBLE);
         txtToolbarTitle.setText("Chỉnh sửa Thông tin nhà xe");
+        clearErrors();
     }
 
     private void exitEditMode() {
@@ -159,41 +165,121 @@ public class QLNhaxeActivity extends AppCompatActivity {
     }
 
     private void showCancelConfirmationDialog() {
-        new AlertDialog.Builder(this)
-                .setTitle("Xác nhận hủy")
-                .setMessage("Bạn có thông tin chỉnh sửa chưa lưu, xác nhận hủy?")
-                .setPositiveButton("Đồng ý", (dialog, which) -> exitEditMode())
-                .setNegativeButton("Không", null)
-                .show();
+        View dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_confirm_cancel, null);
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setView(dialogView);
+
+        AlertDialog dialog = builder.create();
+        if (dialog.getWindow() != null) {
+            dialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+        }
+
+        Button btnNo = dialogView.findViewById(R.id.btnNo);
+        Button btnYes = dialogView.findViewById(R.id.btnYes);
+
+        btnNo.setOnClickListener(v -> dialog.dismiss());
+        btnYes.setOnClickListener(v -> {
+            dialog.dismiss();
+            exitEditMode();
+        });
+
+        dialog.show();
     }
 
     private void validateAndSave() {
+        clearErrors();
+        boolean isValid = true;
+
         String busName = edtBusName.getText().toString().trim();
         String repName = edtRepName.getText().toString().trim();
         String address = edtAddress.getText().toString().trim();
         String phone = edtPhone.getText().toString().trim();
 
-        if (TextUtils.isEmpty(busName)) { showError("Vui lòng nhập Tên nhà xe."); return; }
-        if (TextUtils.isEmpty(repName)) { showError("Vui lòng nhập Họ tên người đại diện."); return; }
-        if (TextUtils.isEmpty(address)) { showError("Vui lòng nhập Địa chỉ trụ sở."); return; }
-        if (TextUtils.isEmpty(phone)) { showError("Vui lòng nhập Số điện thoại."); return; }
+        // Kiểm tra trống
+        if (TextUtils.isEmpty(busName)) {
+            showFieldError(edtBusName, tvErrorBusName, "Vui lòng nhập Tên nhà xe.");
+            isValid = false;
+        }
+        if (TextUtils.isEmpty(repName)) {
+            showFieldError(edtRepName, tvErrorRepName, "Vui lòng nhập Họ tên người đại diện.");
+            isValid = false;
+        }
+        if (TextUtils.isEmpty(address)) {
+            showFieldError(edtAddress, tvErrorAddress, "Vui lòng nhập Địa chỉ trụ sở.");
+            isValid = false;
+        }
+        if (TextUtils.isEmpty(phone)) {
+            showFieldError(edtPhone, tvErrorPhone, "Vui lòng nhập Số điện thoại.");
+            isValid = false;
+        }
 
-        if (isSpecialCharStart(busName)) { showError("Tên nhà xe không được bắt đầu bằng ký tự đặc biệt."); return; }
-        if (isSpecialCharStart(repName)) { showError("Họ tên người đại diện không được bắt đầu bằng ký tự đặc biệt."); return; }
+        if (!isValid) return;
 
+        // Kiểm tra hợp lệ
+        if (isSpecialCharStart(busName)) {
+            showFieldError(edtBusName, tvErrorBusName, "Tên nhà xe không bắt đầu bằng ký tự đặc biệt.");
+            isValid = false;
+        }
+        if (isSpecialCharStart(repName)) {
+            showFieldError(edtRepName, tvErrorRepName, "Họ tên người đại diện không bắt đầu bằng ký tự đặc biệt.");
+            isValid = false;
+        }
         if (address.matches(".*[!@#$%^&*()].*")) {
-            showError("Địa chỉ trụ sở chứa ký tự đặc biệt không hợp lệ.");
-            return;
+            showFieldError(edtAddress, tvErrorAddress, "Địa chỉ trụ sở chứa ký tự đặc biệt không hợp lệ.");
+            isValid = false;
         }
-
         if (!phone.matches("0\\d{9}")) {
-            showError("Số điện thoại phải gồm 10 chữ số và bắt đầu bằng số 0.");
-            return;
+            showFieldError(edtPhone, tvErrorPhone, "Số điện thoại phải gồm 10 chữ số và bắt đầu bằng số 0.");
+            isValid = false;
         }
 
-        updateViewMode(busName, repName, address, phone);
-        Toast.makeText(this, "Cập nhật thông tin thành công", Toast.LENGTH_SHORT).show();
-        exitEditMode();
+        if (isValid) {
+            updateViewMode(busName, repName, address, phone);
+            showSuccessPopup();
+        }
+    }
+
+    private void showFieldError(EditText editText, TextView errorTextView, String message) {
+        editText.setBackgroundResource(R.drawable.bg_input_error);
+        errorTextView.setText(message);
+        errorTextView.setVisibility(View.VISIBLE);
+    }
+
+    private void clearErrors() {
+        edtBusName.setBackgroundResource(R.drawable.bg_input_white);
+        edtRepName.setBackgroundResource(R.drawable.bg_input_white);
+        edtAddress.setBackgroundResource(R.drawable.bg_input_white);
+        edtPhone.setBackgroundResource(R.drawable.bg_input_white);
+
+        tvErrorBusName.setVisibility(View.GONE);
+        tvErrorRepName.setVisibility(View.GONE);
+        tvErrorAddress.setVisibility(View.GONE);
+        tvErrorPhone.setVisibility(View.GONE);
+    }
+
+    private void showSuccessPopup() {
+        View dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_update_success, null);
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setView(dialogView);
+
+        AlertDialog dialog = builder.create();
+        if (dialog.getWindow() != null) {
+            dialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+        }
+
+        dialog.show();
+
+        new Handler().postDelayed(() -> {
+            if (dialog.isShowing()) {
+                dialog.dismiss();
+                exitEditMode();
+            }
+        }, 2000);
+
+        dialogView.setOnClickListener(v -> {
+            dialog.dismiss();
+            exitEditMode();
+        });
     }
 
     private void updateViewMode(String name, String rep, String addr, String phone) {

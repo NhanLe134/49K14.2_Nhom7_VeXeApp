@@ -22,10 +22,10 @@ public class OperatorMainActivity extends AppCompatActivity {
     }
 
     private void initViews() {
-        // Ánh xạ Avatar góc trên bên phải (imgOpProfile)
+        // Ánh xạ Avatar góc trên bên phải
         imgOpProfile = findViewById(R.id.imgOpProfile);
 
-        // Ánh xạ các nút ở thanh Bottom Navigation (Khớp với ID trong XML)
+        // Ánh xạ các nút ở thanh Bottom Navigation
         navHome = findViewById(R.id.nav_home_op_main);
         navDriver = findViewById(R.id.nav_driver_op);
         navVehicle = findViewById(R.id.nav_vehicle_op);
@@ -34,16 +34,17 @@ public class OperatorMainActivity extends AppCompatActivity {
     }
 
     private void setupEvents() {
-        // 1. Khi bấm vào Avatar (imgOpProfile)
-        // Kết hợp: Ưu tiên dẫn vào trang QLNhaxeActivity của Xù để quản lý thông tin
+        // 1. Khi bấm vào Avatar: Merge Logic
+        // Dẫn sang OperatorProfileActivity (Hồ sơ nhà xe) theo bản của họ
+        // hoặc Xù có thể đổi lại QLNhaxeActivity nếu muốn quản lý thông tin chung
         if (imgOpProfile != null) {
             imgOpProfile.setOnClickListener(v -> {
-                Intent intent = new Intent(OperatorMainActivity.this, QLNhaxeActivity.class);
+                Intent intent = new Intent(OperatorMainActivity.this, OperatorProfileActivity.class);
                 startActivity(intent);
             });
         }
 
-        // 2. Tab "Phương tiện" (Màn hình trung gian của Xù)
+        // 2. Tab "Phương tiện" (PhuongTienManagementActivity)
         if (navVehicle != null) {
             navVehicle.setOnClickListener(v -> {
                 Intent intent = new Intent(OperatorMainActivity.this, PhuongTienManagementActivity.class);
@@ -51,7 +52,7 @@ public class OperatorMainActivity extends AppCompatActivity {
             });
         }
 
-        // 3. Tab "Chuyến xe" (Lấy từ code của bạn mới pull về)
+        // 3. Tab "Chuyến xe" (TripListActivity)
         if (navTrip != null) {
             navTrip.setOnClickListener(v -> {
                 Intent intent = new Intent(OperatorMainActivity.this, TripListActivity.class);
@@ -59,7 +60,7 @@ public class OperatorMainActivity extends AppCompatActivity {
             });
         }
 
-        // 4. Tab "Tuyến xe" (Tất cả mọi người đều dùng chung)
+        // 4. Tab "Tuyến xe" (QLTuyenxeActivity)
         if (navRoute != null) {
             navRoute.setOnClickListener(v -> {
                 Intent intent = new Intent(OperatorMainActivity.this, QLTuyenxeActivity.class);
@@ -67,15 +68,19 @@ public class OperatorMainActivity extends AppCompatActivity {
             });
         }
 
-        // 5. Các tab bổ trợ (Trang chủ và Tài xế)
-        if (navHome != null) {
-            navHome.setOnClickListener(v ->
-                    Toast.makeText(this, "Bạn đang ở Trang chủ", Toast.LENGTH_SHORT).show());
+        // 5. Tab "Tài xế": Theo bản của họ dẫn vào QLNhaxeActivity
+        if (navDriver != null) {
+            navDriver.setOnClickListener(v -> {
+                Intent intent = new Intent(OperatorMainActivity.this, QLNhaxeActivity.class);
+                startActivity(intent);
+                Toast.makeText(this, "Quản lý thông tin nhà xe & Tài xế", Toast.LENGTH_SHORT).show();
+            });
         }
 
-        if (navDriver != null) {
-            navDriver.setOnClickListener(v ->
-                    Toast.makeText(this, "Chức năng Quản lý tài xế đang phát triển", Toast.LENGTH_SHORT).show());
+        // 6. Tab "Trang chủ"
+        if (navHome != null) {
+            navHome.setOnClickListener(v ->
+                    Toast.makeText(this, "Bạn đang ở Trang chủ quản trị", Toast.LENGTH_SHORT).show());
         }
     }
 }
