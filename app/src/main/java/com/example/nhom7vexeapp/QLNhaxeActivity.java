@@ -38,12 +38,7 @@ public class QLNhaxeActivity extends AppCompatActivity {
 
         initViews();
         setupEvents();
-<<<<<<< Updated upstream
         setupBottomNavigation();
-        // Giả lập load dữ liệu ban đầu
-=======
-        setupNavigation();
->>>>>>> Stashed changes
         loadInitialData();
     }
 
@@ -95,22 +90,9 @@ public class QLNhaxeActivity extends AppCompatActivity {
         });
     }
 
-<<<<<<< Updated upstream
     private void setupBottomNavigation() {
         // Home
         View navHome = findViewById(R.id.nav_home_op);
-=======
-    private void setupNavigation() {
-        LinearLayout navRoute = findViewById(R.id.nav_route_op);
-        if (navRoute != null) {
-            navRoute.setOnClickListener(v -> {
-                Intent intent = new Intent(this, QLTuyenxeActivity.class);
-                startActivity(intent);
-            });
-        }
-        
-        LinearLayout navHome = findViewById(R.id.nav_home_op);
->>>>>>> Stashed changes
         if (navHome == null) navHome = findViewById(R.id.nav_home_op_main);
         if (navHome != null) {
             navHome.setOnClickListener(v -> {
