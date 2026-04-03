@@ -35,11 +35,17 @@ public class TripAdapter extends RecyclerView.Adapter<TripAdapter.TripViewHolder
     @Override
     public void onBindViewHolder(@NonNull TripViewHolder holder, int position) {
         Trip trip = tripList.get(position);
+        
+        // Cập nhật text khớp với thiết kế mới
         holder.tvTripId.setText("Mã chuyến: " + trip.getId());
-        holder.tvRouteName.setText("Tuyến: " + trip.getRouteName());
-        holder.tvTimeDate.setText("Giờ xuất phát: " + trip.getTime() + " | " + trip.getDate());
-        holder.tvVehicle.setText("Loại xe: " + trip.getVehicleType());
+        holder.tvRouteName.setText(trip.getRouteName());
+        holder.tvVehicle.setText(trip.getVehicleType());
         holder.tvStatus.setText(trip.getStatus());
+        
+        // tvTimeDate ẩn trong layout nhưng vẫn set dữ liệu nếu cần
+        if (holder.tvTimeDate != null) {
+            holder.tvTimeDate.setText(trip.getTime() + " | " + trip.getDate());
+        }
 
         holder.btnEdit.setOnClickListener(v -> {
             if (listener != null) {
