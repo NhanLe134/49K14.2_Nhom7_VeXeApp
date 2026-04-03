@@ -3,6 +3,7 @@ package com.example.nhom7vexeapp;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
@@ -11,6 +12,18 @@ import android.widget.TextView;
 import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.example.nhom7vexeapp.api.ApiClient;
+import com.example.nhom7vexeapp.api.ApiService;
+import com.example.nhom7vexeapp.api.CustomerResponse;
+import com.example.nhom7vexeapp.api.LoginRequest;
+import com.example.nhom7vexeapp.api.LoginResponse;
+
+import java.util.List;
+
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
+
 public class LoginActivity extends AppCompatActivity {
 
     private boolean isOperatorMode = false;
@@ -18,6 +31,7 @@ public class LoginActivity extends AppCompatActivity {
     private TextView tvLoginTitle, tvSwitchMode, tvRegisterCustomer, tvRegisterOperator;
     private EditText edtPhoneLogin, edtUsername, edtPassword;
     private Button btnLoginCustomer, btnLoginOperator;
+    private ApiService apiService;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -25,6 +39,7 @@ public class LoginActivity extends AppCompatActivity {
         setContentView(R.layout.activity_login);
 
         initViews();
+        apiService = ApiClient.getClient().create(ApiService.class);
 
         tvSwitchMode.setOnClickListener(v -> {
             isOperatorMode = !isOperatorMode;
@@ -41,12 +56,6 @@ public class LoginActivity extends AppCompatActivity {
 
         btnLoginCustomer.setOnClickListener(v -> handleCustomerLogin());
         btnLoginOperator.setOnClickListener(v -> handleOperatorLogin());
-        
-        // Nhận SĐT vừa đăng ký xong (nếu có)
-        String registeredPhone = getIntent().getStringExtra("registeredPhone");
-        if (registeredPhone != null) {
-            edtPhoneLogin.setText(registeredPhone);
-        }
     }
 
     private void initViews() {
@@ -80,49 +89,97 @@ public class LoginActivity extends AppCompatActivity {
     }
 
     private void handleCustomerLogin() {
-        String phone = edtPhoneLogin.getText().toString().trim();
-        if (phone.length() >= 10) {
-            SharedPreferences pref = getSharedPreferences("UserPrefs", MODE_PRIVATE);
-            SharedPreferences.Editor editor = pref.edit();
+        final String phoneInput = edtPhoneLogin.getText().toString().trim();
+        if (phoneInput.length() >= 10) {
+            Toast.makeText(this, "Đang kiểm tra...", Toast.LENGTH_SHORT).show();
             
-            String name, dob;
-            
-            // Xử lý thông tin theo SĐT yêu cầu
-            if (phone.equals("0799376815")) {
-                name = "Huy Phong";
-                dob = "03/10/2005";
-            } else {
-                // Kiểm tra xem SĐT này đã đăng ký qua App chưa
-                name = pref.getString("name_" + phone, "Nguyễn Văn An");
-                dob = pref.getString("dob_" + phone, "20/11/2004");
-            }
-            
-            editor.putBoolean("isLoggedIn", true);
-            editor.putString("customerPhone", phone);
-            editor.putString("customerName", name);
-            editor.putString("customerDob", dob);
-            editor.apply();
+            apiService.checkUserRole(phoneInput).enqueue(new Callback<List<CustomerResponse>>() {
+                @Override
+                public void onResponse(Call<List<CustomerResponse>> call, Response<List<CustomerResponse>> response) {
+                    if (response.isSuccessful() && response.body() != null) {
+                        List<CustomerResponse> users = response.body();
+                        CustomerResponse foundUser = null;
 
-            startActivity(new Intent(LoginActivity.this, MainActivity.class));
-            finish();
+                        // Quét danh sách để tìm đúng người có SĐT khớp
+                        for (CustomerResponse u : users) {
+                            if (u.getSdt() != null && u.getSdt().equals(phoneInput)) {
+                                foundUser = u;
+                                break;
+                            }
+                        }
+
+                        if (foundUser != null) {
+                            String role = foundUser.getVaitro();
+                            Log.d("LOGIN_DEBUG", "Phone: " + phoneInput + " | Role: " + role);
+
+                            if (role != null && role.equalsIgnoreCase("KhachHang")) {
+                                proceedCustomerLogin(foundUser.getSdt(), foundUser.getTenKhachHang(), foundUser.getNgaySinh());
+                            } else {
+                                Toast.makeText(LoginActivity.this, "Đây là tài khoản Nhà xe, vui lòng đăng nhập mục Nhà xe!", Toast.LENGTH_LONG).show();
+                            }
+                        } else {
+                            Toast.makeText(LoginActivity.this, "Số điện thoại chưa được đăng ký!", Toast.LENGTH_SHORT).show();
+                        }
+                    }
+                }
+
+                @Override
+                public void onFailure(Call<List<CustomerResponse>> call, Throwable t) {
+                    Toast.makeText(LoginActivity.this, "Lỗi kết nối máy chủ!", Toast.LENGTH_SHORT).show();
+                }
+            });
         } else {
             Toast.makeText(this, "Vui lòng nhập số điện thoại hợp lệ!", Toast.LENGTH_SHORT).show();
         }
     }
 
-    private void handleOperatorLogin() {
-        String user = edtUsername.getText().toString();
-        String pass = edtPassword.getText().toString();
-
+    private void proceedCustomerLogin(String phone, String name, String dob) {
         SharedPreferences pref = getSharedPreferences("UserPrefs", MODE_PRIVATE);
-        String savedUser = pref.getString("op_user", "admin");
-        String savedPass = pref.getString("op_pass", "123");
+        SharedPreferences.Editor editor = pref.edit();
+        editor.putBoolean("isLoggedIn", true);
+        editor.putString("customerPhone", phone);
+        editor.putString("customerName", name);
+        editor.putString("customerDob", dob);
+        editor.apply();
 
-        if (user.equals(savedUser) && pass.equals(savedPass)) {
-            startActivity(new Intent(LoginActivity.this, OperatorMainActivity.class));
-            finish();
-        } else {
-            Toast.makeText(this, "Sai tài khoản nhà xe!", Toast.LENGTH_SHORT).show();
+        Toast.makeText(this, "Đăng nhập khách hàng thành công!", Toast.LENGTH_SHORT).show();
+        startActivity(new Intent(LoginActivity.this, MainActivity.class));
+        finish();
+    }
+
+    private void handleOperatorLogin() {
+        String user = edtUsername.getText().toString().trim();
+        String pass = edtPassword.getText().toString().trim();
+
+        if (user.isEmpty() || pass.isEmpty()) {
+            Toast.makeText(this, "Vui lòng nhập đầy đủ thông tin!", Toast.LENGTH_SHORT).show();
+            return;
         }
+
+        LoginRequest loginRequest = new LoginRequest(user, pass);
+        apiService.login(loginRequest).enqueue(new Callback<LoginResponse>() {
+            @Override
+            public void onResponse(Call<LoginResponse> call, Response<LoginResponse> response) {
+                if (response.isSuccessful() && response.body() != null) {
+                    SharedPreferences pref = getSharedPreferences("UserPrefs", MODE_PRIVATE);
+                    SharedPreferences.Editor editor = pref.edit();
+                    editor.putString("token", response.body().getToken());
+                    editor.putBoolean("isLoggedIn", true);
+                    editor.putString("role", "operator");
+                    editor.apply();
+
+                    Toast.makeText(LoginActivity.this, "Đăng nhập nhà xe thành công!", Toast.LENGTH_SHORT).show();
+                    startActivity(new Intent(LoginActivity.this, OperatorMainActivity.class));
+                    finish();
+                } else {
+                    Toast.makeText(LoginActivity.this, "Sai tài khoản hoặc mật khẩu nhà xe!", Toast.LENGTH_SHORT).show();
+                }
+            }
+
+            @Override
+            public void onFailure(Call<LoginResponse> call, Throwable t) {
+                Toast.makeText(LoginActivity.this, "Lỗi kết nối máy chủ!", Toast.LENGTH_SHORT).show();
+            }
+        });
     }
 }
