@@ -4,21 +4,32 @@ import android.app.Dialog;
 import android.content.Context;
 import android.graphics.Color;
 import android.graphics.drawable.ColorDrawable;
+import android.os.Handler;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ImageView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.nhom7vexeapp.R;
+import com.example.nhom7vexeapp.api.ApiClient;
+import com.example.nhom7vexeapp.api.ApiService;
 import com.example.nhom7vexeapp.models.Loaixe;
 
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.List;
 import java.util.Locale;
+
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
 
 public class CarTypeAdapter extends RecyclerView.Adapter<CarTypeAdapter.CarTypeViewHolder> {
 
@@ -28,6 +39,15 @@ public class CarTypeAdapter extends RecyclerView.Adapter<CarTypeAdapter.CarTypeV
     public CarTypeAdapter(List<Loaixe> carList, Context context) {
         this.carList = carList;
         this.context = context;
+    }
+
+    private String getDisplayNameBySeats(int soCho) {
+        switch (soCho) {
+            case 4: return "Loại xe A";
+            case 7: return "Loại xe B";
+            case 9: return "Loại xe C";
+            default: return "Loại xe " + soCho + " chỗ";
+        }
     }
 
     @NonNull
@@ -40,11 +60,15 @@ public class CarTypeAdapter extends RecyclerView.Adapter<CarTypeAdapter.CarTypeV
     @Override
     public void onBindViewHolder(@NonNull CarTypeViewHolder holder, int position) {
         Loaixe car = carList.get(position);
+        String displayName = getDisplayNameBySeats(car.getSoCho());
 
-        holder.tvName.setText(car.getLoaixeID());
+        holder.tvName.setText(displayName);
+        if (displayName.contains(" ")) {
+            holder.tvIcon.setText(displayName.substring(displayName.length() - 1));
+        }
+
         holder.tvSeats.setText(car.getSoCho() + " chỗ");
         
-        // Hiển thị giá vé an toàn
         try {
             double gia = Double.parseDouble(car.getGiaVe());
             holder.tvPrice.setText(String.format(Locale.getDefault(), "%,.0f đ", gia));
@@ -53,16 +77,10 @@ public class CarTypeAdapter extends RecyclerView.Adapter<CarTypeAdapter.CarTypeV
         }
 
         holder.tvDate.setText(car.getNgayCapNhatGia() != null ? car.getNgayCapNhatGia() : "Chưa cập nhật");
-
-        if (car.getLoaixeID() != null && !car.getLoaixeID().isEmpty()) {
-            // Lấy ký tự cuối làm Icon đại diện
-            holder.tvIcon.setText(car.getLoaixeID().substring(car.getLoaixeID().length() - 1));
-        }
-
-        holder.btnEdit.setOnClickListener(v -> showUpdateDialog(car));
+        holder.btnEdit.setOnClickListener(v -> showUpdateDialog(car, position));
     }
 
-    private void showUpdateDialog(Loaixe car) {
+    private void showUpdateDialog(Loaixe car, int position) {
         Dialog dialog = new Dialog(context);
         dialog.setContentView(R.layout.dialog_update_price);
         if (dialog.getWindow() != null) {
@@ -74,13 +92,94 @@ public class CarTypeAdapter extends RecyclerView.Adapter<CarTypeAdapter.CarTypeV
         EditText edtPrice = dialog.findViewById(R.id.edtNewPrice);
         Button btnSave = dialog.findViewById(R.id.btnSavePrice);
         Button btnCancel = dialog.findViewById(R.id.btnCancelUpdate);
+        ImageView btnClose = dialog.findViewById(R.id.btnCancelUpdateTop);
 
-        tvCarInfo.setText(car.getLoaixeID() + " (" + car.getSoCho() + " chỗ)");
-        tvCurrentPrice.setText(car.getGiaVe() + " đ");
+        tvCarInfo.setText(getDisplayNameBySeats(car.getSoCho()) + " (" + car.getSoCho() + " chỗ)");
+        
+        // Hiển thị giá hiện tại an toàn
+        try {
+            double gia = Double.parseDouble(car.getGiaVe());
+            tvCurrentPrice.setText(String.format(Locale.getDefault(), "%,.0f đ", gia));
+        } catch (Exception e) {
+            tvCurrentPrice.setText(car.getGiaVe() + " đ");
+        }
+        tvCurrentPrice.setVisibility(View.VISIBLE);
 
-        btnSave.setOnClickListener(vSave -> dialog.dismiss());
-        btnCancel.setOnClickListener(vCancel -> dialog.dismiss());
+        btnSave.setOnClickListener(vSave -> {
+            String newPrice = edtPrice.getText().toString().trim();
+            if (newPrice.isEmpty()) {
+                Toast.makeText(context, "Vui lòng nhập giá mới", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            car.setGiaVe(newPrice);
+            String currentDate = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(new Date());
+            car.setNgayCapNhatGia(currentDate);
+
+            ApiService apiService = ApiClient.getClient().create(ApiService.class);
+            apiService.updateLoaixe(car.getLoaixeID(), car).enqueue(new Callback<Loaixe>() {
+                @Override
+                public void onResponse(Call<Loaixe> call, Response<Loaixe> response) {
+                    if (response.isSuccessful()) {
+                        notifyItemChanged(position);
+                        dialog.dismiss();
+                        showSuccessDialog("Cập nhật giá vé thành công");
+                    } else {
+                        Toast.makeText(context, "Lỗi server: " + response.code(), Toast.LENGTH_SHORT).show();
+                    }
+                }
+
+                @Override
+                public void onFailure(Call<Loaixe> call, Throwable t) {
+                    Toast.makeText(context, "Lỗi kết nối: " + t.getMessage(), Toast.LENGTH_SHORT).show();
+                }
+            });
+        });
+
+        // Khi nhấn Hủy, hiện dialog xác nhận
+        View.OnClickListener cancelListener = v -> showCancelConfirmDialog(dialog);
+        btnCancel.setOnClickListener(cancelListener);
+        if (btnClose != null) btnClose.setOnClickListener(cancelListener);
+
         dialog.show();
+    }
+
+    private void showCancelConfirmDialog(Dialog updateDialog) {
+        Dialog cancelDialog = new Dialog(context);
+        cancelDialog.setContentView(R.layout.dialog_cancle_update_price);
+        if (cancelDialog.getWindow() != null) {
+            cancelDialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+        }
+
+        Button btnNo = cancelDialog.findViewById(R.id.btnNo);
+        Button btnYes = cancelDialog.findViewById(R.id.btnYes);
+
+        btnNo.setOnClickListener(v -> cancelDialog.dismiss()); // Không: đóng dialog xác nhận, giữ update dialog
+
+        btnYes.setOnClickListener(v -> {
+            cancelDialog.dismiss();
+            updateDialog.dismiss(); // Đồng ý: đóng cả 2 dialog để về lại trang loại xe
+        });
+
+        cancelDialog.show();
+    }
+
+    private void showSuccessDialog(String message) {
+        Dialog successDialog = new Dialog(context);
+        successDialog.setContentView(R.layout.dialog_success);
+        if (successDialog.getWindow() != null) {
+            successDialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+        }
+
+        TextView tvMessage = successDialog.findViewById(R.id.tvMessage);
+        if (tvMessage != null) {
+            tvMessage.setText(message);
+        }
+
+        successDialog.show();
+
+        // Tự động đóng sau 2 giây
+        new Handler().postDelayed(successDialog::dismiss, 2000);
     }
 
     @Override

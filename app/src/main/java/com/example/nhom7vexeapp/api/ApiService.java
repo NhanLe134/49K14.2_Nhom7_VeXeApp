@@ -5,10 +5,10 @@ import com.example.nhom7vexeapp.models.Trip;
 import retrofit2.Call;
 import retrofit2.http.Body;
 import retrofit2.http.GET;
+import retrofit2.http.PUT;
 import retrofit2.http.POST;
-import retrofit2.http.Query;
+import retrofit2.http.Path;
 import java.util.List;
-
 
 public interface ApiService {
     @POST("api/user-auth/")
@@ -17,14 +17,16 @@ public interface ApiService {
     @GET("api/user-auth/")
     Call<List<CustomerResponse>> getUsers();
 
-    // API cho CHUYẾN XE (ChuyenXe trong Django)
     @GET("api/chuyenxe/")
     Call<List<Trip>> getTrips();
 
     @POST("api/chuyenxe/")
     Call<Trip> createTrip(@Body Trip trip);
 
-    // Cập nhật lấy danh sách loại xe (đồng bộ với Django model Loaixe)
     @GET("api/loaixe/")
     Call<List<Loaixe>> getLoaixe();
+
+    // Thêm API để cập nhật loại xe (sử dụng PUT và truyền LoaixeID)
+    @PUT("api/loaixe/{id}/")
+    Call<Loaixe> updateLoaixe(@Path("id") String id, @Body Loaixe loaixe);
 }
