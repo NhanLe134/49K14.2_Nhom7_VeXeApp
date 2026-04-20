@@ -2,8 +2,9 @@ package com.example.nhom7vexeapp;
 
 import android.app.DatePickerDialog;
 import android.content.Intent;
-import android.content.SharedPreferences;
+import android.net.Uri;
 import android.os.Bundle;
+import android.provider.MediaStore;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.view.LayoutInflater;
@@ -14,10 +15,23 @@ import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+
+import com.example.nhom7vexeapp.api.ApiClient;
+import com.example.nhom7vexeapp.api.ApiService;
 import com.google.android.material.button.MaterialButton;
+
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Random;
 import java.util.Calendar;
+
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
 
 public class CustomerRegisterActivity extends AppCompatActivity {
 
@@ -25,45 +39,54 @@ public class CustomerRegisterActivity extends AppCompatActivity {
     private ScrollView layoutStepForm;
     private EditText edtPhoneInput, edtFullName, edtDob;
     private TextView tvFixedPhone, tvFileName, tvHeaderTitle;
-    private TextView tvErrorFullName, tvErrorDob, tvErrorFile;
     private MaterialButton btnVerifyPhone, btnFinish, btnCancel, btnSelectFile;
     private String verifiedPhone = "";
+    private String selectedImageBase64 = ""; // Biến lưu chuỗi ảnh thật
+    private boolean isOtpVerified = false;
+
+    private final ActivityResultLauncher<Intent> pickImageLauncher =
+            registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), result -> {
+                if (result.getResultCode() == RESULT_OK && result.getData() != null) {
+                    Uri uri = result.getData().getData();
+                    if (uri != null) {
+                        selectedImageBase64 = encodeImageToBase64(uri);
+                        tvFileName.setText("Đã chọn ảnh thành công");
+                    }
+                }
+            });
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_customer_register);
-
         initViews();
-
-        findViewById(R.id.btnBack).setOnClickListener(v -> handleCancel());
 
         btnVerifyPhone.setOnClickListener(v -> {
             String phone = edtPhoneInput.getText().toString().trim();
-            if (phone.length() < 10) {
-                Toast.makeText(this, "Vui lòng nhập số điện thoại hợp lệ", Toast.LENGTH_SHORT).show();
-            } else {
-                verifiedPhone = phone;
-                showOtpDialog();
-            }
+            if (phone.length() >= 10) { verifiedPhone = phone; showOtpDialog(); }
         });
 
         edtDob.setOnClickListener(v -> showDatePicker());
-
-        btnFinish.setOnClickListener(v -> {
-            if (validateForm()) {
-                saveUserData(); // Lưu thông tin tài khoản theo SĐT đã xác thực
-                Toast.makeText(this, "Đăng ký thành công cho SĐT: " + verifiedPhone, Toast.LENGTH_LONG).show();
-                
-                // Quay về màn hình đăng nhập
-                Intent intent = new Intent(this, LoginActivity.class);
-                intent.putExtra("registeredPhone", verifiedPhone);
-                startActivity(intent);
-                finish();
-            }
+        btnSelectFile.setOnClickListener(v -> {
+            Intent intent = new Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
+            pickImageLauncher.launch(intent);
         });
 
-        btnCancel.setOnClickListener(v -> handleCancel());
+        btnFinish.setOnClickListener(v -> { if (validateForm()) handleRegister(); });
+        btnCancel.setOnClickListener(v -> finish());
+    }
+
+    private String encodeImageToBase64(Uri imageUri) {
+        try {
+            android.graphics.Bitmap bitmap = MediaStore.Images.Media.getBitmap(this.getContentResolver(), imageUri);
+            java.io.ByteArrayOutputStream outputStream = new java.io.ByteArrayOutputStream();
+            bitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG, 50, outputStream);
+            byte[] byteArray = outputStream.toByteArray();
+            return "data:image/jpeg;base64," + android.util.Base64.encodeToString(byteArray, android.util.Base64.DEFAULT);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return "";
+        }
     }
 
     private void initViews() {
@@ -71,151 +94,90 @@ public class CustomerRegisterActivity extends AppCompatActivity {
         layoutStepForm = findViewById(R.id.layoutStepForm);
         edtPhoneInput = findViewById(R.id.edtPhoneInput);
         btnVerifyPhone = findViewById(R.id.btnVerifyPhone);
-
         edtFullName = findViewById(R.id.edtFullName);
         edtDob = findViewById(R.id.edtDob);
         tvFixedPhone = findViewById(R.id.tvFixedPhone);
         tvFileName = findViewById(R.id.tvFileName);
         tvHeaderTitle = findViewById(R.id.tvHeaderTitle);
-
-        tvErrorFullName = findViewById(R.id.tvErrorFullName);
-        tvErrorDob = findViewById(R.id.tvErrorDob);
-        tvErrorFile = findViewById(R.id.tvErrorFile);
-
         btnFinish = findViewById(R.id.btnFinish);
         btnCancel = findViewById(R.id.btnCancel);
         btnSelectFile = findViewById(R.id.btnSelectFile);
     }
 
-    private void saveUserData() {
-        SharedPreferences pref = getSharedPreferences("UserPrefs", MODE_PRIVATE);
-        SharedPreferences.Editor editor = pref.edit();
-        
-        // Lưu thông tin theo Key chứa SĐT để không bị ghi đè bởi người dùng khác
-        String nameKey = "name_" + verifiedPhone;
-        String dobKey = "dob_" + verifiedPhone;
-        
-        editor.putString(nameKey, edtFullName.getText().toString().trim());
-        editor.putString(dobKey, edtDob.getText().toString().trim());
-        
-        // Cập nhật SĐT cuối cùng vừa đăng ký thành công
-        editor.putString("lastRegisteredPhone", verifiedPhone);
-        editor.apply();
+    private void handleRegister() {
+        String randomUserID = "KH" + (10000 + new Random().nextInt(89999));
+        ApiService apiService = ApiClient.getClient().create(ApiService.class);
+
+        Map<String, String> authData = new HashMap<>();
+        authData.put("UserID", randomUserID);
+        authData.put("TenDangNhap", verifiedPhone);
+        authData.put("MatKhau", "123");
+        authData.put("SoDienThoai", verifiedPhone);
+        authData.put("Vaitro", "KhachHang");
+
+        apiService.registerAuth(authData).enqueue(new Callback<Void>() {
+            @Override
+            public void onResponse(Call<Void> call, Response<Void> response) {
+                if (response.isSuccessful()) {
+                    Map<String, String> profileData = new HashMap<>();
+                    profileData.put("KhachHangID", randomUserID); 
+                    profileData.put("TenKhachHang", edtFullName.getText().toString().trim());
+                    profileData.put("NgaySinh", edtDob.getText().toString().trim());
+                    profileData.put("SoDienThoai", verifiedPhone);
+                    profileData.put("Email", verifiedPhone + "@gmail.com");
+                    profileData.put("AnhDaiDienURL", selectedImageBase64); // GỬI ẢNH THẬT (BASE64)
+
+                    apiService.createKhachHangProfile(profileData).enqueue(new Callback<Void>() {
+                        @Override
+                        public void onResponse(Call<Void> call, Response<Void> res) {
+                            if (res.isSuccessful()) {
+                                Toast.makeText(CustomerRegisterActivity.this, "Đăng ký thành công!", Toast.LENGTH_LONG).show();
+                                finish();
+                            } else {
+                                try {
+                                    String error = res.errorBody() != null ? res.errorBody().string() : "Lỗi Profile";
+                                    Toast.makeText(CustomerRegisterActivity.this, "Lỗi bảng Khách hàng: " + error, Toast.LENGTH_LONG).show();
+                                } catch (Exception e) { e.printStackTrace(); }
+                            }
+                        }
+                        @Override
+                        public void onFailure(Call<Void> call, Throwable t) {
+                            Toast.makeText(CustomerRegisterActivity.this, "Lỗi kết nối Profile!", Toast.LENGTH_SHORT).show();
+                        }
+                    });
+                } else {
+                    Toast.makeText(CustomerRegisterActivity.this, "Lỗi tạo tài khoản!", Toast.LENGTH_SHORT).show();
+                }
+            }
+            @Override
+            public void onFailure(Call<Void> call, Throwable t) {
+                Toast.makeText(CustomerRegisterActivity.this, "Lỗi kết nối Server!", Toast.LENGTH_SHORT).show();
+            }
+        });
     }
 
     private void showOtpDialog() {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         View view = LayoutInflater.from(this).inflate(R.layout.dialog_otp, null);
         builder.setView(view);
-
-        EditText otp1 = view.findViewById(R.id.otp1);
-        EditText otp2 = view.findViewById(R.id.otp2);
-        EditText otp3 = view.findViewById(R.id.otp3);
-        EditText otp4 = view.findViewById(R.id.otp4);
-        EditText otp5 = view.findViewById(R.id.otp5);
-        EditText otp6 = view.findViewById(R.id.otp6);
-        TextView tvOtpError = view.findViewById(R.id.tvOtpError);
         Button btnVerifyOtp = view.findViewById(R.id.btnVerifyOtp);
-
+        btnVerifyOtp.setVisibility(View.VISIBLE);
         AlertDialog dialog = builder.create();
         dialog.show();
-
-        setupOtpEntry(otp1, otp2);
-        setupOtpEntry(otp2, otp3);
-        setupOtpEntry(otp3, otp4);
-        setupOtpEntry(otp4, otp5);
-        setupOtpEntry(otp5, otp6);
-
-        otp6.addTextChangedListener(new TextWatcher() {
-            @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
-            @Override
-            public void onTextChanged(CharSequence s, int start, int before, int count) {
-                if (s.length() == 1) btnVerifyOtp.setVisibility(View.VISIBLE);
-            }
-            @Override
-            public void afterTextChanged(Editable s) {}
-        });
-
-        btnVerifyOtp.setOnClickListener(v -> {
-            String code = otp1.getText().toString() + otp2.getText().toString() + otp3.getText().toString() +
-                          otp4.getText().toString() + otp5.getText().toString() + otp6.getText().toString();
-            
-            if (code.equals("123456")) {
-                dialog.dismiss();
-                moveToForm();
-            } else {
-                tvOtpError.setVisibility(View.VISIBLE);
-                tvOtpError.setText("Mã OTP không đúng. Vui lòng thử lại.");
-            }
-        });
-    }
-
-    private void setupOtpEntry(EditText current, EditText next) {
-        current.addTextChangedListener(new TextWatcher() {
-            @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
-            @Override
-            public void onTextChanged(CharSequence s, int start, int before, int count) {
-                if (s.length() == 1) next.requestFocus();
-            }
-            @Override
-            public void afterTextChanged(Editable s) {}
-        });
+        btnVerifyOtp.setOnClickListener(v -> { isOtpVerified = true; dialog.dismiss(); moveToForm(); });
     }
 
     private void moveToForm() {
         layoutStepPhone.setVisibility(View.GONE);
         layoutStepForm.setVisibility(View.VISIBLE);
-        tvHeaderTitle.setText("Đăng ký tài khoản khách hàng");
-        // Hiển thị SĐT đã xác thực lên Form và không cho sửa
         tvFixedPhone.setText(verifiedPhone);
     }
 
     private void showDatePicker() {
         Calendar c = Calendar.getInstance();
-        int year = c.get(Calendar.YEAR);
-        int month = c.get(Calendar.MONTH);
-        int day = c.get(Calendar.DAY_OF_MONTH);
-
-        DatePickerDialog datePickerDialog = new DatePickerDialog(this, (view, y, m, d) -> {
-            edtDob.setText(String.format("%02d/%02d/%d", d, m + 1, y));
-            tvErrorDob.setVisibility(View.GONE);
-            edtDob.setBackgroundResource(R.drawable.bg_input_white);
-        }, year, month, day);
-        
-        Calendar maxDate = Calendar.getInstance();
-        maxDate.add(Calendar.DAY_OF_MONTH, -1);
-        datePickerDialog.getDatePicker().setMaxDate(maxDate.getTimeInMillis());
-        
-        datePickerDialog.show();
+        new DatePickerDialog(this, (view, y, m, d) -> edtDob.setText(d + "/" + (m + 1) + "/" + y), 
+            c.get(Calendar.YEAR), c.get(Calendar.MONTH), c.get(Calendar.DAY_OF_MONTH)).show();
     }
 
-    private boolean validateForm() {
-        boolean isValid = true;
-        if (edtFullName.getText().toString().trim().isEmpty()) {
-            edtFullName.setBackgroundResource(R.drawable.bg_input_error);
-            tvErrorFullName.setVisibility(View.VISIBLE);
-            isValid = false;
-        } else {
-            edtFullName.setBackgroundResource(R.drawable.bg_input_white);
-            tvErrorFullName.setVisibility(View.GONE);
-        }
-
-        if (edtDob.getText().toString().trim().isEmpty()) {
-            edtDob.setBackgroundResource(R.drawable.bg_input_error);
-            tvErrorDob.setVisibility(View.VISIBLE);
-            isValid = false;
-        }
-        return isValid;
-    }
-
-    private void handleCancel() {
-        new AlertDialog.Builder(this)
-                .setTitle("Thông báo")
-                .setMessage("Bạn có chắc chắn muốn hủy đăng ký?")
-                .setPositiveButton("Đồng ý", (dialog, which) -> finish())
-                .setNegativeButton("Không", null)
-                .show();
-    }
+    private boolean validateForm() { return !edtFullName.getText().toString().trim().isEmpty(); }
 }
