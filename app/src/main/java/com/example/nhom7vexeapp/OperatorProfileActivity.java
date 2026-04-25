@@ -13,6 +13,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import com.bumptech.glide.Glide;
 import com.example.nhom7vexeapp.api.ApiClient;
 import com.example.nhom7vexeapp.api.ApiService;
+import com.example.nhom7vexeapp.models.NhaXe;
 import com.google.android.material.button.MaterialButton;
 
 import java.util.Map;
@@ -72,27 +73,24 @@ public class OperatorProfileActivity extends AppCompatActivity {
 
     private void loadOperatorDataFromDB(String opUid, String fallbackName) {
         ApiService apiService = ApiClient.getClient().create(ApiService.class);
-        apiService.getNhaXeDetail(opUid).enqueue(new Callback<Map<String, Object>>() {
+        apiService.getNhaXeDetail(opUid).enqueue(new Callback<NhaXe>() {
             @Override
-            public void onResponse(Call<Map<String, Object>> call, Response<Map<String, Object>> response) {
+            public void onResponse(Call<NhaXe> call, Response<NhaXe> response) {
                 if (response.isSuccessful() && response.body() != null) {
-                    Map<String, Object> data = response.body();
-                    Log.d("DEBUG_PROFILE", "Data: " + data.toString());
-
-                    // SỬA LẠI: Lấy đúng Key Tennhaxe (viết thường h và x) từ ảnh Admin
-                    String name = findValue(data, "Tennhaxe", "TenNhaXe", "ten_nha_xe");
-                    String tenNhaXe = name.isEmpty() ? fallbackName : name;
+                    NhaXe nhaXe = response.body();
+                    
+                    String tenNhaXe = (nhaXe.getBusName() == null || nhaXe.getBusName().isEmpty()) ? fallbackName : nhaXe.getBusName();
                     
                     if (tvOpNameHeader != null) tvOpNameHeader.setText(tenNhaXe);
                     if (tvOpNameDetail != null) tvOpNameDetail.setText(tenNhaXe);
                     
-                    if (tvOpRep != null) tvOpRep.setText(findValue(data, "Nguoidaidien", "NguoiDaiDien"));
-                    if (tvOpAddress != null) tvOpAddress.setText(findValue(data, "Diachitruso", "DiaChiTruSo"));
-                    if (tvOpPhone != null) tvOpPhone.setText(findValue(data, "Sodienthoai", "SoDienThoai"));
-                    if (tvOpEmail != null) tvOpEmail.setText(findValue(data, "Email", "email"));
+                    if (tvOpRep != null) tvOpRep.setText("Chưa cập nhật"); // API chưa có trường này
+                    if (tvOpAddress != null) tvOpAddress.setText(nhaXe.getAddress());
+                    if (tvOpPhone != null) tvOpPhone.setText(nhaXe.getPhone());
+                    if (tvOpEmail != null) tvOpEmail.setText(nhaXe.getEmail());
 
-                    String imgUrl = findValue(data, "Anhdaidienurl", "AnhDaiDienURL");
-                    if (!imgUrl.isEmpty() && imgOpBanner != null) {
+                    String imgUrl = nhaXe.getBannerUrl();
+                    if (imgUrl != null && !imgUrl.isEmpty() && imgOpBanner != null) {
                         Glide.with(OperatorProfileActivity.this)
                                 .load(imgUrl)
                                 .placeholder(R.drawable.banner_nhaxe)
@@ -103,11 +101,12 @@ public class OperatorProfileActivity extends AppCompatActivity {
             }
 
             @Override
-            public void onFailure(Call<Map<String, Object>> call, Throwable t) {
+            public void onFailure(Call<NhaXe> call, Throwable t) {
                 if (tvOpNameHeader != null) tvOpNameHeader.setText(fallbackName);
             }
         });
     }
+
 
     private String findValue(Map<String, Object> map, String... keys) {
         for (String key : keys) {

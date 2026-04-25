@@ -23,6 +23,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import com.bumptech.glide.Glide;
 import com.example.nhom7vexeapp.api.ApiClient;
 import com.example.nhom7vexeapp.api.ApiService;
+import com.example.nhom7vexeapp.models.NhaXe;
 import com.google.android.material.button.MaterialButton;
 
 import java.util.HashMap;
@@ -94,28 +95,28 @@ public class EditOperatorProfileActivity extends AppCompatActivity {
     private void loadCurrentDataFromDB() {
         if (opUid.isEmpty()) return;
         ApiService apiService = ApiClient.getClient().create(ApiService.class);
-        apiService.getNhaXeDetail(opUid).enqueue(new Callback<Map<String, Object>>() {
+        apiService.getNhaXeDetail(opUid).enqueue(new Callback<NhaXe>() {
             @Override
-            public void onResponse(Call<Map<String, Object>> call, Response<Map<String, Object>> response) {
+            public void onResponse(Call<NhaXe> call, Response<NhaXe> response) {
                 if (response.isSuccessful() && response.body() != null) {
-                    Map<String, Object> data = response.body();
-                    // SỬA LẠI: Khớp key Tennhaxe từ Database
-                    edtName.setText(findValue(data, "Tennhaxe", "TenNhaXe"));
-                    edtRep.setText(findValue(data, "NguoiDaiDien", "Nguoidaidien"));
-                    edtAddress.setText(findValue(data, "DiaChiTruSo", "Diachitruso"));
-                    edtPhone.setText(findValue(data, "SoDienThoai", "Sodienthoai"));
-                    opEmail = findValue(data, "Email", "email");
+                    NhaXe nhaXe = response.body();
+                    edtName.setText(nhaXe.getBusName());
+                    edtRep.setText("Chưa cập nhật"); // API chưa có trường này
+                    edtAddress.setText(nhaXe.getAddress());
+                    edtPhone.setText(nhaXe.getPhone());
+                    opEmail = nhaXe.getEmail();
 
-                    String imgUrl = findValue(data, "AnhDaiDienURL", "Anhdaidienurl");
-                    if (!imgUrl.isEmpty()) {
+                    String imgUrl = nhaXe.getBannerUrl();
+                    if (imgUrl != null && !imgUrl.isEmpty()) {
                         Glide.with(EditOperatorProfileActivity.this).load(imgUrl).into(imgPreview);
                         selectedImageBase64 = imgUrl;
                     }
                 }
             }
-            @Override public void onFailure(Call<Map<String, Object>> call, Throwable t) {}
+            @Override public void onFailure(Call<NhaXe> call, Throwable t) {}
         });
     }
+
 
     private String findValue(Map<String, Object> map, String... keys) {
         for (String key : keys) {

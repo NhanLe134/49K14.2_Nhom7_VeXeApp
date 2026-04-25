@@ -1,6 +1,8 @@
 package com.example.nhom7vexeapp.api;
 
 import com.example.nhom7vexeapp.models.Loaixe;
+import com.example.nhom7vexeapp.models.NhaXe;
+import com.example.nhom7vexeapp.models.Route;
 import com.example.nhom7vexeapp.models.Trip;
 import retrofit2.Call;
 import retrofit2.http.Body;
@@ -29,7 +31,10 @@ public interface ApiService {
     Call<Void> createNhaXeProfile(@Body Map<String, String> data);
 
     @GET("api/nhaxe/{id}/")
-    Call<Map<String, Object>> getNhaXeDetail(@Path("id") String id);
+    Call<NhaXe> getNhaXeDetail(@Path("id") String id);
+
+    @GET("api/nhaxe/")
+    Call<List<NhaXe>> getNhaXes();
 
     @PUT("api/nhaxe/{id}/")
     Call<Void> updateNhaXeProfile(@Path("id") String id, @Body Map<String, String> data);
@@ -51,4 +56,11 @@ public interface ApiService {
 
     @PUT("api/loaixe/{id}/")
     Call<Loaixe> updateLoaixe(@Path("id") String id, @Body Loaixe loaixe);
+
+    @GET("api/tuyenxe/")
+    Call<List<Route>> getRoutes();
+
+    @PUT("api/tuyenxe/{id}/")
+    Call<Void> updateRoute(@Path("id") String id, @Body Map<String, String> data);
 }
+

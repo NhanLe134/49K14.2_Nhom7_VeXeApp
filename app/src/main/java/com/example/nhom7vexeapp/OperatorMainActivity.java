@@ -39,10 +39,11 @@ public class OperatorMainActivity extends AppCompatActivity {
         // hoặc Xù có thể đổi lại QLNhaxeActivity nếu muốn quản lý thông tin chung
         if (imgOpProfile != null) {
             imgOpProfile.setOnClickListener(v -> {
-                Intent intent = new Intent(OperatorMainActivity.this, OperatorProfileActivity.class);
+                Intent intent = new Intent(OperatorMainActivity.this, QLNhaxeActivity.class);
                 startActivity(intent);
             });
         }
+
 
         // 2. Tab "Phương tiện" (PhuongTienManagementActivity)
         if (navVehicle != null) {
