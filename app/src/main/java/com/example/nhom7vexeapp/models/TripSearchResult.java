@@ -4,8 +4,7 @@ import com.google.gson.annotations.SerializedName;
 
 public class TripSearchResult extends Trip {
     
-    @SerializedName("GioDen")
-    private String endTime;
+    // Đã xóa endTime vì nó đã có ở lớp cha Trip với @SerializedName("GioDen")
 
     @SerializedName("TenNhaXe")
     private String nhaXeName;
@@ -22,12 +21,14 @@ public class TripSearchResult extends Trip {
     @SerializedName("SoChoTrong")
     private Integer soChoTrong;
 
+    public TripSearchResult() {
+        super();
+    }
+
     public TripSearchResult(String id, String tuyenXeID, String date, String startTime, String status) {
         super(id, tuyenXeID, date, startTime, status);
     }
 
-    public String getEndTime() { return endTime; }
-    
     // Nếu Backend trả về TenNhaXe thì lấy, không thì để mặc định
     public String getNhaXeName() { 
         return nhaXeName != null ? nhaXeName : "Nhà xe"; 

@@ -99,7 +99,7 @@ public class LoginActivity extends AppCompatActivity {
                     }
 
                     if (foundUser != null && "KhachHang".equalsIgnoreCase(foundUser.getVaitro())) {
-                        saveAndGo(foundUser.getUserID(), "customer");
+                        saveAndGo(foundUser, "customer");
                     } else {
                         Toast.makeText(LoginActivity.this, "SĐT chưa đăng ký hoặc không phải khách hàng!", Toast.LENGTH_SHORT).show();
                     }
@@ -107,7 +107,7 @@ public class LoginActivity extends AppCompatActivity {
             }
             @Override
             public void onFailure(Call<List<CustomerResponse>> call, Throwable t) {
-                Toast.makeText(LoginActivity.this, "Lỗi: " + t.getMessage(), Toast.LENGTH_SHORT).show();
+                Toast.makeText(LoginActivity.this, "Lỗi kết nối server!", Toast.LENGTH_SHORT).show();
             }
         });
     }
@@ -127,14 +127,13 @@ public class LoginActivity extends AppCompatActivity {
                 if (response.isSuccessful() && response.body() != null) {
                     CustomerResponse foundOp = null;
                     for (CustomerResponse u : response.body()) {
-                        // So khớp TenDangNhap và Matkhau (Lưu ý: API dùng MatKhau hoặc Matkhau)
                         if (user.equals(u.getTenKhachHang()) && pass.equals(u.getMatKhau())) {
                             foundOp = u; break;
                         }
                     }
 
                     if (foundOp != null && "Nhaxe".equalsIgnoreCase(foundOp.getVaitro())) {
-                        saveAndGo(foundOp.getUserID(), "operator");
+                        saveAndGo(foundOp, "operator");
                     } else {
                         Toast.makeText(LoginActivity.this, "Sai tài khoản hoặc mật khẩu!", Toast.LENGTH_SHORT).show();
                     }
@@ -147,17 +146,21 @@ public class LoginActivity extends AppCompatActivity {
         });
     }
 
-    private void saveAndGo(String uid, String role) {
+    private void saveAndGo(CustomerResponse user, String role) {
         SharedPreferences pref = getSharedPreferences("UserPrefs", MODE_PRIVATE);
         SharedPreferences.Editor editor = pref.edit();
         editor.putBoolean("isLoggedIn", true);
         editor.putString("role", role);
         
+        // ĐỒNG BỘ CÁC KEY LƯU TRỮ
+        editor.putString("customerUid", user.getUserID());
+        editor.putString("customerName", user.getTenKhachHang());
+        editor.putString("customerPhone", user.getSdt());
+        
         if ("operator".equals(role)) {
-            editor.putString("op_uid", uid); // QUAN TRỌNG: Lưu ID nhà xe để vào Profile lấy được dữ liệu
+            editor.putString("op_uid", user.getUserID());
             startActivity(new Intent(this, OperatorMainActivity.class));
         } else {
-            editor.putString("customerUid", uid);
             startActivity(new Intent(this, MainActivity.class));
         }
         editor.apply();

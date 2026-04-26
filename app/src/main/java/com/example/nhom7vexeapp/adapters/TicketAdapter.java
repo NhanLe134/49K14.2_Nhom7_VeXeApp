@@ -1,4 +1,4 @@
-package com.example.nhom7vexeapp;
+package com.example.nhom7vexeapp.adapters;
 
 import android.content.Context;
 import android.graphics.Color;
@@ -9,6 +9,10 @@ import android.widget.Button;
 import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
+
+import com.example.nhom7vexeapp.R;
+import com.example.nhom7vexeapp.TicketModel;
+
 import java.util.List;
 
 public class TicketAdapter extends RecyclerView.Adapter<TicketAdapter.TicketViewHolder> {

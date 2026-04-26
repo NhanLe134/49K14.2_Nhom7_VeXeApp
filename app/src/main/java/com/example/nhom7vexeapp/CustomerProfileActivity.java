@@ -4,11 +4,13 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.net.Uri;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
+
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.PickVisualMediaRequest;
 import androidx.activity.result.contract.ActivityResultContracts;
@@ -25,6 +27,7 @@ import com.example.nhom7vexeapp.viewmodels.CustomerViewModel;
 import com.google.android.material.button.MaterialButton;
 
 import java.util.Map;
+
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
@@ -50,7 +53,6 @@ public class CustomerProfileActivity extends AppCompatActivity {
         setupObservers();
         setupEvents();
 
-        // Cấu hình chọn ảnh từ thiết bị
         pickMedia = registerForActivityResult(new ActivityResultContracts.PickVisualMedia(), uri -> {
             if (uri != null && imgAvatar != null) {
                 Glide.with(this).load(uri).into(imgAvatar);
@@ -84,19 +86,15 @@ public class CustomerProfileActivity extends AppCompatActivity {
     private void loadData() {
         SharedPreferences pref = getSharedPreferences("UserPrefs", MODE_PRIVATE);
         
-        // Hiển thị ảnh cục bộ nếu có
         String localUri = pref.getString("localAvatarUri", "");
         if (!localUri.isEmpty() && imgAvatar != null) {
             Glide.with(this).load(Uri.parse(localUri)).placeholder(R.drawable.logo).into(imgAvatar);
         }
 
         String customerUid = pref.getString("customerUid", "");
-        String khachHangID = pref.getString("khachHangID", "");
         
         if (!customerUid.isEmpty()) {
             loadFromDatabase(customerUid);
-        } else if (!khachHangID.isEmpty()) {
-            viewModel.getProfile(khachHangID);
         } else {
             loadLocalData();
         }
@@ -104,16 +102,24 @@ public class CustomerProfileActivity extends AppCompatActivity {
 
     private void loadFromDatabase(String uid) {
         ApiService apiService = ApiClient.getClient().create(ApiService.class);
-        apiService.getKhachHangDetail(uid).enqueue(new Callback<Map<String, Object>>() {
+        // Sử dụng getProfile để nhận về đối tượng KhachHang chuẩn
+        apiService.getProfile(uid).enqueue(new Callback<KhachHang>() {
             @Override
-            public void onResponse(Call<Map<String, Object>> call, Response<Map<String, Object>> response) {
+            public void onResponse(Call<KhachHang> call, Response<KhachHang> response) {
                 if (response.isSuccessful() && response.body() != null) {
-                    Map<String, Object> data = response.body();
-                    if (data.containsKey("hoTen")) tvName.setText(String.valueOf(data.get("hoTen")));
-                    if (data.containsKey("Ngaysinh")) tvDob.setText(String.valueOf(data.get("Ngaysinh")));
+                    KhachHang customer = response.body();
+                    tvName.setText(customer.getHoTen() != null ? customer.getHoTen() : "Chưa cập nhật");
+                    tvDob.setText(customer.getNgaySinh() != null ? customer.getNgaySinh() : "Chưa cập nhật");
+                    
+                    // Cập nhật SĐT từ SharedPreferences nếu trên DB chưa có
+                    SharedPreferences pref = getSharedPreferences("UserPrefs", MODE_PRIVATE);
+                    tvPhone.setText(pref.getString("customerPhone", ""));
                 }
             }
-            @Override public void onFailure(Call<Map<String, Object>> call, Throwable t) {}
+            @Override public void onFailure(Call<KhachHang> call, Throwable t) {
+                Log.e("API_ERROR", "Load profile failed: " + t.getMessage());
+                loadLocalData();
+            }
         });
     }
 
@@ -173,7 +179,9 @@ public class CustomerProfileActivity extends AppCompatActivity {
                 Toast.makeText(CustomerProfileActivity.this, "Đã xóa tài khoản", Toast.LENGTH_SHORT).show();
                 handleLogout();
             }
-            @Override public void onFailure(Call<Void> call, Throwable t) {}
+            @Override public void onFailure(Call<Void> call, Throwable t) {
+                Toast.makeText(CustomerProfileActivity.this, "Lỗi kết nối khi xóa!", Toast.LENGTH_SHORT).show();
+            }
         });
     }
 
@@ -188,8 +196,8 @@ public class CustomerProfileActivity extends AppCompatActivity {
     private void loadLocalData() {
         SharedPreferences pref = getSharedPreferences("UserPrefs", MODE_PRIVATE);
         tvName.setText(pref.getString("customerName", "Khách hàng"));
-        tvPhone.setText(pref.getString("customerPhone", "0916441979"));
-        tvDob.setText(pref.getString("customerDob", "20/11/2004"));
+        tvPhone.setText(pref.getString("customerPhone", ""));
+        tvDob.setText(pref.getString("customerDob", ""));
     }
 
     @Override

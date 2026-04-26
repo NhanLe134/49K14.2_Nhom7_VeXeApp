@@ -7,6 +7,9 @@ public class Driver implements Serializable {
     private String name;
     private String phone;
 
+    public Driver() {
+    }
+
     public Driver(String id, String name, String phone) {
         this.id = id;
         this.name = name;

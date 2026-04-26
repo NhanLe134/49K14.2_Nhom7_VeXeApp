@@ -15,19 +15,29 @@ public class Trip implements Serializable {
     @SerializedName("TuyenXe")
     private String tuyenXeID;
 
+    @SerializedName("Taixe")
+    private String taiXeID;
+
     @SerializedName("NgayKhoiHanh")
     private String date;
 
     @SerializedName("GioDi")
     private String startTime;
 
+    @SerializedName("GioDen")
+    private String endTime;
+
     @SerializedName("TrangThai")
     private String status;
 
-    // Các trường phục vụ hiển thị trên App
-    private int seats = 4; // Mặc định 4 chỗ nếu server chưa trả về
+    // Các trường hỗ trợ quản lý (giữ lại để không lỗi code của bạn bè)
+    private int seats = 4; 
     private Driver assignedDriver;
     private List<Passenger> passengers = new ArrayList<>();
+
+    // No-arg constructor for GSON
+    public Trip() {
+    }
 
     public Trip(String id, String tuyenXeID, String date, String startTime, String status) {
         this.id = id;
@@ -37,13 +47,18 @@ public class Trip implements Serializable {
         this.status = status;
     }
 
-    public String getId() { return id; }
-    public String getDate() { return date; }
-    public String getTime() { return startTime; }
-    public String getStatus() { return status; }
-    public String getRouteName() { return "Tuyến: " + tuyenXeID; }
+    // Getters an toàn
+    public String getId() { return id != null ? id : ""; }
+    public String getXeID() { return xeID != null ? xeID : ""; }
+    public String getTuyenXeID() { return tuyenXeID != null ? tuyenXeID : ""; }
+    public String getDate() { return date != null ? date : ""; }
+    public String getTime() { return startTime != null ? startTime : "00:00"; }
+    public String getEndTime() { return endTime != null ? endTime : ""; }
+    public String getStatus() { return status != null ? status : "-"; }
     
-    // Các phương thức mà TripDetailActivity đang yêu cầu
+    public String getRouteName() { return "Tuyến: " + getTuyenXeID(); }
+    public String getVehicleType() { return "Xe: " + getXeID(); }
+    
     public int getSeats() { return seats; }
     public void setSeats(int seats) { this.seats = seats; }
     
@@ -51,7 +66,5 @@ public class Trip implements Serializable {
     public void setPassengers(List<Passenger> passengers) { this.passengers = passengers; }
     
     public Driver getAssignedDriver() { return assignedDriver; }
-    public void setAssignedDriver(Driver assignedDriver) { this.assignedDriver = assignedDriver; }
-
-    public String getVehicleType() { return "Mã xe: " + (xeID != null ? xeID : "Chưa gán"); }
+    public void setAssignedDriver(Driver driver) { this.assignedDriver = driver; }
 }
