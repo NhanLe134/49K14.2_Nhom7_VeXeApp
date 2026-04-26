@@ -4,6 +4,7 @@ import com.example.nhom7vexeapp.models.BookingRequest;
 import com.example.nhom7vexeapp.models.KhachHang;
 import com.example.nhom7vexeapp.models.Loaixe;
 import com.example.nhom7vexeapp.models.Seat;
+import com.example.nhom7vexeapp.models.Ticket;
 import com.example.nhom7vexeapp.models.Trip;
 import com.example.nhom7vexeapp.models.TripResponse;
 import com.example.nhom7vexeapp.models.TripSearchResult;
@@ -31,10 +32,10 @@ public interface ApiService {
     Call<LoginResponse> login(@Body com.example.nhom7vexeapp.models.LoginRequest loginRequest);
 
     @GET("api/user-auth/")
-    Call<List<CustomerResponse>> getUsers(); // Từ file 1
+    Call<List<CustomerResponse>> getUsers(); 
 
     @GET("api/user-auth/")
-    Call<List<UserModel>> getUsers(@Query("Method") String method); // Từ file 2
+    Call<List<UserModel>> getUsers(@Query("Method") String method); 
 
     @GET("api/user-auth/{id}/")
     Call<CustomerResponse> getUserAuthDetail(@Path("id") String id);
@@ -93,13 +94,13 @@ public interface ApiService {
     Call<List<Trip>> getTrips();
 
     @POST("api/chuyenxe/")
-    Call<Trip> createTrip(@Body Trip trip); // File 1: trả về Trip đơn
+    Call<Trip> createTrip(@Body Trip trip);
 
     @POST("api/chuyenxe/")
-    Call<List<Trip>> createTripList(@Body Trip trip); // File 2: trả về List<Trip>
+    Call<List<Trip>> createTripList(@Body Trip trip);
 
     @POST("api/chuyenxe/")
-    Call<Trip> createTripSingle(@Body Trip trip); // File 2: alias khác của tạo chuyến
+    Call<Trip> createTripSingle(@Body Trip trip);
 
     @POST("api/chuyenxe/")
     Call<Void> createTripRaw(@Body Map<String, Object> data);
@@ -119,10 +120,19 @@ public interface ApiService {
     Call<Void> bookTicket(@Body BookingRequest bookingRequest);
 
     @GET("api/ve/")
+    Call<List<Ticket>> getTickets(
+        @Query("KhachHang") String khachHangId,
+        @Query("TrangThai") String trangThai
+    );
+
+    @GET("api/ve/")
     Call<List<Map<String, Object>>> getTicketsByTrip(@Query("ChuyenXe") String tripId);
 
     @PATCH("api/ve/{id}/")
     Call<Void> patchTicket(@Path("id") String id, @Body Map<String, Object> data);
+
+    @DELETE("api/ve/{id}/")
+    Call<Void> deleteTicket(@Path("id") String id);
 
     @GET("api/khachhang/{id}/lich-su-ve/")
     Call<List<TicketModel>> getTicketHistory(@Path("id") String id);
@@ -191,10 +201,10 @@ public interface ApiService {
     Call<Void> createNhaXeProfile(@Body Map<String, String> data);
 
     @GET("api/nhaxe/{id}/")
-    Call<NhaXe> getNhaXeDetail(@Path("id") String id); // Kiểu NhaXe (File 2)
+    Call<NhaXe> getNhaXeDetail(@Path("id") String id); 
 
     @GET("api/nhaxe/{id}/")
-    Call<Map<String, Object>> getNhaXeDetailRaw(@Path("id") String id); // Kiểu Map (File 1)
+    Call<Map<String, Object>> getNhaXeDetailRaw(@Path("id") String id);
 
     @PUT("api/nhaxe/{id}/")
     Call<Void> updateNhaXeProfile(@Path("id") String id, @Body Map<String, String> data);
