@@ -3,7 +3,7 @@ package com.example.nhom7vexeapp;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
-import android.util.Log;
+import android.view.View;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
@@ -25,9 +25,11 @@ import retrofit2.Response;
 public class CustomerProfileActivity extends AppCompatActivity {
 
     private TextView tvName, tvPhone, tvDob;
-    private ImageView btnBack, btnEdit, imgAvatar;
+    private ImageView btnBack, imgAvatar;
+    private View btnEditProfileImage; // Đổi sang View vì dùng CardView trong layout
     private MaterialButton btnLogout;
     private LinearLayout navHome;
+    private String customerUid;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -37,7 +39,7 @@ public class CustomerProfileActivity extends AppCompatActivity {
         initViews();
         
         SharedPreferences pref = getSharedPreferences("UserPrefs", MODE_PRIVATE);
-        String customerUid = pref.getString("customerUid", "");
+        customerUid = pref.getString("customerUid", "");
         if (customerUid.isEmpty()) customerUid = pref.getString("user_id", ""); 
 
         if (customerUid.isEmpty()) {
@@ -47,20 +49,12 @@ public class CustomerProfileActivity extends AppCompatActivity {
             return;
         }
 
+        // Hiển thị SĐT từ bộ nhớ tạm ngay lập tức để tránh chữ "Đang tải"
+        String savedPhone = pref.getString("customerPhone", "");
+        if (!savedPhone.isEmpty()) tvPhone.setText(savedPhone);
+
         loadAllData(customerUid);
-
-        btnBack.setOnClickListener(v -> finish());
-        if (navHome != null) navHome.setOnClickListener(v -> finish());
-
-        btnLogout.setOnClickListener(v -> {
-            pref.edit().clear().apply();
-            startActivity(new Intent(this, LoginActivity.class).setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK));
-            finish();
-        });
-
-        btnEdit.setOnClickListener(v -> {
-            startActivityForResult(new Intent(this, EditCustomerProfileActivity.class), 300);
-        });
+        setupEvents();
     }
 
     private void initViews() {
@@ -68,10 +62,35 @@ public class CustomerProfileActivity extends AppCompatActivity {
         tvPhone = findViewById(R.id.tvProfilePhone);
         tvDob = findViewById(R.id.tvProfileDob);
         btnBack = findViewById(R.id.btnBack);
-        btnEdit = findViewById(R.id.btnEditProfile);
+        imgAvatar = findViewById(R.id.imgProfileAvatar);
+        btnEditProfileImage = findViewById(R.id.btnEditProfileImage);
         btnLogout = findViewById(R.id.btnLogout);
         navHome = findViewById(R.id.nav_home_profile);
-        imgAvatar = findViewById(R.id.imgProfileAvatar);
+    }
+
+    private void setupEvents() {
+        if (btnBack != null) btnBack.setOnClickListener(v -> finish());
+        if (navHome != null) navHome.setOnClickListener(v -> finish());
+
+        // Nhấn vào cây bút (CardView chứa icon) để mở trang chỉnh sửa
+        if (btnEditProfileImage != null) {
+            btnEditProfileImage.setOnClickListener(v -> {
+                Intent intent = new Intent(this, EditCustomerProfileActivity.class);
+                startActivityForResult(intent, 300);
+            });
+        }
+
+        if (btnLogout != null) {
+            btnLogout.setOnClickListener(v -> handleLogout());
+        }
+    }
+
+    private void handleLogout() {
+        getSharedPreferences("UserPrefs", MODE_PRIVATE).edit().clear().apply();
+        Intent intent = new Intent(this, LoginActivity.class);
+        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+        startActivity(intent);
+        finish();
     }
 
     private void loadAllData(String uid) {
@@ -82,11 +101,9 @@ public class CustomerProfileActivity extends AppCompatActivity {
                 if (response.isSuccessful() && response.body() != null) {
                     Map<String, Object> data = response.body();
                     
-                    // 1. Hiển thị Tên
                     String name = findValue(data, "Hovaten", "TenKhachHang", "name");
                     tvName.setText(name.isEmpty() ? "Khách hàng" : name);
 
-                    // 2. Hiển thị Ngày sinh
                     String dob = findValue(data, "Ngaysinh", "NgaySinh");
                     if (!dob.isEmpty() && dob.contains("-")) {
                         try {
@@ -96,10 +113,8 @@ public class CustomerProfileActivity extends AppCompatActivity {
                     }
                     tvDob.setText(dob.isEmpty() ? "Chưa cập nhật" : dob);
 
-                    // ✅ 3. HIỂN THỊ ẢNH ĐẠI DIỆN (Xử lý chuỗi Base64)
                     String imgData = findValue(data, "AnhDaiDien", "AnhDaiDienURL", "Avatar");
                     if (!imgData.isEmpty() && imgAvatar != null) {
-                        // Nếu là chuỗi Base64 (bắt đầu bằng data:image), Glide sẽ tự xử lý hoặc load URL
                         Glide.with(CustomerProfileActivity.this)
                             .load(imgData)
                             .placeholder(R.drawable.nhaxe_home)
@@ -107,12 +122,8 @@ public class CustomerProfileActivity extends AppCompatActivity {
                             .circleCrop()
                             .into(imgAvatar);
                     }
-                    
-                    // 4. Hiển thị SĐT
-                    fetchPhoneFromAuth(uid);
-                } else {
-                    fetchPhoneFromAuth(uid);
                 }
+                fetchPhoneFromAuth(uid);
             }
             @Override public void onFailure(Call<Map<String, Object>> call, Throwable t) {
                 fetchPhoneFromAuth(uid);
@@ -125,7 +136,10 @@ public class CustomerProfileActivity extends AppCompatActivity {
             @Override
             public void onResponse(Call<CustomerResponse> call, Response<CustomerResponse> response) {
                 if (response.isSuccessful() && response.body() != null) {
-                    tvPhone.setText(response.body().getSdt());
+                    String phone = response.body().getSdt();
+                    if (phone != null && !phone.isEmpty()) {
+                        tvPhone.setText(phone);
+                    }
                 }
             }
             @Override public void onFailure(Call<CustomerResponse> call, Throwable t) {}
@@ -148,7 +162,7 @@ public class CustomerProfileActivity extends AppCompatActivity {
     protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
         if (requestCode == 300 && resultCode == RESULT_OK) {
-            loadAllData(getSharedPreferences("UserPrefs", MODE_PRIVATE).getString("customerUid", ""));
+            loadAllData(customerUid);
         }
     }
 }

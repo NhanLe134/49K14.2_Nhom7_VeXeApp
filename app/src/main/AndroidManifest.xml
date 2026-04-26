@@ -23,7 +23,6 @@
         android:theme="@style/Theme.Nhom7VeXeApp"
         android:usesCleartextTraffic="true">
 
-        <!-- ĐẶT MAINACTIVITY LẠI LÀM MÀN HÌNH KHỞI CHẠY THEO YÊU CẦU -->
         <activity
             android:name=".MainActivity"
             android:exported="true">
@@ -126,6 +125,10 @@
             android:name=".VietNhanXetActivity"
             android:exported="false"
             android:windowSoftInputMode="adjustPan" />
+
+        <activity
+            android:name=".CreateDriverAccountActivity"
+            android:exported="false" />
 
     </application>
 

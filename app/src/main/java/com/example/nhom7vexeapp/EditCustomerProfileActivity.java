@@ -16,6 +16,7 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.nhom7vexeapp.api.ApiClient;
 import com.example.nhom7vexeapp.api.ApiService;
+import com.example.nhom7vexeapp.api.CustomerResponse;
 import com.google.android.material.button.MaterialButton;
 
 import java.util.Calendar;
@@ -38,12 +39,16 @@ public class EditCustomerProfileActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_edit_customer_profile);
 
-        // ✅ LẤY ID THỰC TẾ
         SharedPreferences pref = getSharedPreferences("UserPrefs", MODE_PRIVATE);
         customerUid = pref.getString("customerUid", "");
-        if (customerUid.isEmpty()) customerUid = pref.getString("user_id", "KH00001");
+        if (customerUid.isEmpty()) customerUid = pref.getString("user_id", "");
 
         initViews();
+        
+        // Ưu tiên hiển thị SĐT đã lưu trong máy trước
+        String savedPhone = pref.getString("customerPhone", "");
+        if (!savedPhone.isEmpty()) tvPhone.setText(savedPhone);
+        
         loadData();
 
         edtDob.setOnClickListener(v -> showDatePicker());
@@ -62,18 +67,32 @@ public class EditCustomerProfileActivity extends AppCompatActivity {
 
     private void loadData() {
         ApiService apiService = ApiClient.getClient().create(ApiService.class);
+        
+        // 1. Lấy thông tin chi tiết khách hàng (Tên, Ngày sinh)
         apiService.getKhachHangDetail(customerUid).enqueue(new Callback<Map<String, Object>>() {
             @Override
             public void onResponse(Call<Map<String, Object>> call, Response<Map<String, Object>> response) {
                 if (response.isSuccessful() && response.body() != null) {
                     Map<String, Object> data = response.body();
-                    // ✅ TỰ ĐIỀN THÔNG TIN CŨ VÀO FORM
                     edtName.setText(find(data, "Hovaten", "TenKhachHang", "name"));
-                    edtDob.setText(find(data, "Ngaysinh", "NgaySinh"));
-                    tvPhone.setText(find(data, "SoDienThoai", "Sdt"));
+                    String dob = find(data, "Ngaysinh", "NgaySinh");
+                    if (dob.contains("T")) dob = dob.split("T")[0];
+                    edtDob.setText(dob);
                 }
             }
             @Override public void onFailure(Call<Map<String, Object>> call, Throwable t) {}
+        });
+
+        // 2. Lấy SĐT từ Auth API nếu chưa có
+        apiService.getUserAuthDetail(customerUid).enqueue(new Callback<CustomerResponse>() {
+            @Override
+            public void onResponse(Call<CustomerResponse> call, Response<CustomerResponse> response) {
+                if (response.isSuccessful() && response.body() != null) {
+                    String sdt = response.body().getSdt();
+                    if (sdt != null && !sdt.isEmpty()) tvPhone.setText(sdt);
+                }
+            }
+            @Override public void onFailure(Call<CustomerResponse> call, Throwable t) {}
         });
     }
 
@@ -89,7 +108,7 @@ public class EditCustomerProfileActivity extends AppCompatActivity {
         ApiService apiService = ApiClient.getClient().create(ApiService.class);
         Map<String, String> data = new HashMap<>();
         data.put("KhachHangID", customerUid);
-        data.put("Hovaten", name); // Gửi đúng tên trường cho Backend
+        data.put("Hovaten", name); 
         data.put("Ngaysinh", dob);
 
         apiService.updateKhachHangProfile(customerUid, data).enqueue(new Callback<Void>() {
@@ -98,7 +117,7 @@ public class EditCustomerProfileActivity extends AppCompatActivity {
                 if (response.isSuccessful()) {
                     showSuccess();
                 } else {
-                    Toast.makeText(EditCustomerProfileActivity.this, "Thất bại: " + response.code(), Toast.LENGTH_SHORT).show();
+                    Toast.makeText(EditCustomerProfileActivity.this, "Lỗi cập nhật", Toast.LENGTH_SHORT).show();
                 }
             }
             @Override public void onFailure(Call<Void> call, Throwable t) {
@@ -127,6 +146,6 @@ public class EditCustomerProfileActivity extends AppCompatActivity {
         AlertDialog d = new AlertDialog.Builder(this).setView(dv).create();
         if (d.getWindow() != null) d.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
         d.show();
-        new Handler().postDelayed(() -> { d.dismiss(); setResult(RESULT_OK); finish(); }, 1500);
+        new Handler().postDelayed(() -> { if (d.isShowing()) { d.dismiss(); setResult(RESULT_OK); finish(); } }, 1500);
     }
 }

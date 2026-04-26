@@ -6,7 +6,7 @@
     android:background="#F5F7FA"
     android:fitsSystemWindows="false">
 
-    <!-- HEADER - Tăng padding top để tránh bị đè bởi notch/status bar -->
+    <!-- HEADER -->
     <LinearLayout
         android:id="@+id/header"
         android:layout_width="match_parent"
@@ -128,15 +128,6 @@
                         <TextView android:id="@+id/tvOpPhone" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="N/A" android:textColor="#000000" android:textStyle="bold" />
                     </LinearLayout>
 
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:paddingVertical="8dp">
-                        <TextView android:layout_width="100dp" android:layout_height="wrap_content" android:text="Email:" android:textColor="#757575" />
-                        <TextView android:id="@+id/tvOpEmail" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="N/A" android:textColor="#000000" android:textStyle="bold" />
-                    </LinearLayout>
-
                 </LinearLayout>
 
                 <androidx.cardview.widget.CardView
@@ -150,7 +141,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="match_parent"
                         android:scaleType="centerCrop"
-                        android:src="@drawable/banner_nhaxe" />
+                        android:src="@drawable/nhaxe_home" />
                 </androidx.cardview.widget.CardView>
 
                 <com.google.android.material.button.MaterialButton
@@ -185,6 +176,7 @@
         </androidx.cardview.widget.CardView>
     </ScrollView>
 
+    <!-- BOTTOM NAV -->
     <LinearLayout
         android:id="@+id/bottom_nav"
         android:layout_width="match_parent"

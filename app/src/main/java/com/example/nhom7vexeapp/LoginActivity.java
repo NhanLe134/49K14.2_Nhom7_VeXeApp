@@ -14,7 +14,7 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.nhom7vexeapp.api.ApiClient;
 import com.example.nhom7vexeapp.api.ApiService;
-import com.example.nhom7vexeapp.api.CustomerResponse;
+import com.example.nhom7vexeapp.models.UserModel;
 
 import java.util.List;
 import retrofit2.Call;
@@ -79,16 +79,15 @@ public class LoginActivity extends AppCompatActivity {
         String phone = edtPhoneLogin.getText().toString().trim();
         if (phone.isEmpty()) { Toast.makeText(this, "Vui lòng nhập số điện thoại!", Toast.LENGTH_SHORT).show(); return; }
         
-        apiService.getUsers().enqueue(new Callback<List<CustomerResponse>>() {
+        apiService.getUsers("Get").enqueue(new Callback<List<UserModel>>() {
             @Override
-            public void onResponse(Call<List<CustomerResponse>> call, Response<List<CustomerResponse>> response) {
+            public void onResponse(Call<List<UserModel>> call, Response<List<UserModel>> response) {
                 if (response.isSuccessful() && response.body() != null) {
-                    CustomerResponse found = null;
-                    for (CustomerResponse u : response.body()) {
-                        if (phone.equals(u.getSdt())) { found = u; break; }
+                    UserModel found = null;
+                    for (UserModel u : response.body()) {
+                        if (phone.equals(u.getSoDienThoai())) { found = u; break; }
                     }
                     if (found != null) {
-                        // ✅ SỬA LỖI: Lấy đúng mã KH00001 (getKhachHang) thay vì US00001 (getUserID)
                         String realKhId = found.getKhachHang();
                         if (realKhId == null || realKhId.isEmpty()) realKhId = found.getUserID();
                         saveAndGo(found.getUserID(), "customer", phone, realKhId);
@@ -97,7 +96,7 @@ public class LoginActivity extends AppCompatActivity {
                     }
                 }
             }
-            @Override public void onFailure(Call<List<CustomerResponse>> call, Throwable t) {
+            @Override public void onFailure(Call<List<UserModel>> call, Throwable t) {
                 Toast.makeText(LoginActivity.this, "Lỗi kết nối server!", Toast.LENGTH_SHORT).show();
             }
         });
@@ -108,13 +107,13 @@ public class LoginActivity extends AppCompatActivity {
         String pass = edtPassword.getText().toString().trim();
         if (user.isEmpty() || pass.isEmpty()) { Toast.makeText(this, "Nhập đủ tài khoản và mật khẩu!", Toast.LENGTH_SHORT).show(); return; }
         
-        apiService.getUsers().enqueue(new Callback<List<CustomerResponse>>() {
+        apiService.getUsers("Get").enqueue(new Callback<List<UserModel>>() {
             @Override
-            public void onResponse(Call<List<CustomerResponse>> call, Response<List<CustomerResponse>> response) {
+            public void onResponse(Call<List<UserModel>> call, Response<List<UserModel>> response) {
                 if (response.isSuccessful() && response.body() != null) {
-                    CustomerResponse found = null;
-                    for (CustomerResponse u : response.body()) {
-                        if (user.equals(u.getTenKhachHang()) && pass.equals(u.getMatKhau())) { found = u; break; }
+                    UserModel found = null;
+                    for (UserModel u : response.body()) {
+                        if (user.equals(u.getTenDangNhap()) && pass.equals(u.getMatKhau())) { found = u; break; }
                     }
                     if (found != null && "Nhaxe".equalsIgnoreCase(found.getVaitro())) {
                         String realOpId = found.getNhaxe();
@@ -124,7 +123,7 @@ public class LoginActivity extends AppCompatActivity {
                     }
                 }
             }
-            @Override public void onFailure(Call<List<CustomerResponse>> call, Throwable t) {
+            @Override public void onFailure(Call<List<UserModel>> call, Throwable t) {
                 Toast.makeText(LoginActivity.this, "Lỗi kết nối server!", Toast.LENGTH_SHORT).show();
             }
         });
@@ -141,7 +140,6 @@ public class LoginActivity extends AppCompatActivity {
             editor.putString("op_user", user);
             startActivity(new Intent(this, OperatorMainActivity.class));
         } else {
-            // ✅ LƯU MÃ KHÁCH HÀNG THẬT (KHxxxxx) ĐỂ LOAD PROFILE
             editor.putString("customerUid", targetId);
             editor.putString("user_id", uid);
             editor.putString("customerPhone", user);

@@ -1,56 +1,73 @@
 package com.example.nhom7vexeapp;
 
 import android.content.Intent;
+import android.graphics.Color;
+import android.graphics.drawable.ColorDrawable;
 import android.content.SharedPreferences;
 import android.os.Bundle;
+import android.os.Handler;
+import android.util.Log;
+import android.view.LayoutInflater;
 import android.view.View;
-import android.widget.LinearLayout;
+import android.widget.Button;
+import android.widget.ImageView;
+import android.widget.TextView;
 import android.widget.Toast;
+
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+
 import com.example.nhom7vexeapp.adapters.DriverAdapter;
 import com.example.nhom7vexeapp.api.ApiClient;
 import com.example.nhom7vexeapp.api.ApiService;
 import com.example.nhom7vexeapp.models.Driver;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
 
-public class DriverSelectionActivity extends AppCompatActivity implements DriverAdapter.OnDriverClickListener {
+public class DriverSelectionActivity extends AppCompatActivity implements DriverAdapter.OnDriverListener {
 
+    private static final String TAG = "DriverSelect";
     private RecyclerView rvDrivers;
     private DriverAdapter adapter;
     private List<Driver> driverList = new ArrayList<>();
-    private String opUid;
+    private String opUid, tripId;
+    private ApiService apiService;
+    private ImageView btnBack;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_driver_selection);
 
+        tripId = getIntent().getStringExtra("tripId");
         SharedPreferences pref = getSharedPreferences("UserPrefs", MODE_PRIVATE);
         opUid = pref.getString("op_uid", "NX00001");
 
-        rvDrivers = findViewById(R.id.rvDrivers);
-        rvDrivers.setLayoutManager(new LinearLayoutManager(this));
+        apiService = ApiClient.getClient().create(ApiService.class);
+        initViews();
 
+        btnBack.setOnClickListener(v -> finish());
+        loadDriversWithDetails();
+    }
+
+    private void initViews() {
+        rvDrivers = findViewById(R.id.rvDrivers);
+        btnBack = findViewById(R.id.btnBack);
+        rvDrivers.setLayoutManager(new LinearLayoutManager(this));
         adapter = new DriverAdapter(driverList, this);
         rvDrivers.setAdapter(adapter);
-
-        loadDriversWithDetails();
-        setupBottomNavigation();
     }
 
     private void loadDriversWithDetails() {
-        ApiService apiService = ApiClient.getClient().create(ApiService.class);
-        
-        // 1. Tải bảng Chi Tiết Tài Xế để lấy Họ Tên
         apiService.getChiTietTaiXe().enqueue(new Callback<List<Map<String, Object>>>() {
             @Override
             public void onResponse(Call<List<Map<String, Object>>> call, Response<List<Map<String, Object>>> resCT) {
@@ -63,7 +80,6 @@ public class DriverSelectionActivity extends AppCompatActivity implements Driver
                     }
                 }
 
-                // 2. Tải bảng Tài Xế để lấy SĐT
                 apiService.getDriversRaw().enqueue(new Callback<List<Map<String, Object>>>() {
                     @Override
                     public void onResponse(Call<List<Map<String, Object>>> call, Response<List<Map<String, Object>>> resTX) {
@@ -74,10 +90,9 @@ public class DriverSelectionActivity extends AppCompatActivity implements Driver
                                 if (nxe.isEmpty() || nxe.equalsIgnoreCase(opUid)) {
                                     String id = findVal(tx, "TaiXeID", "id");
                                     String phone = findVal(tx, "SoDienThoai", "phone");
-                                    String name = nameMap.getOrDefault(id, id); // Lấy tên từ map, nếu không có thì dùng ID
-
+                                    String name = nameMap.getOrDefault(id, "Tài xế mới");
                                     if (!id.isEmpty()) {
-                                        driverList.add(new Driver(id, name, phone));
+                                        driverList.add(new Driver(id, name, phone, "", "1 Tô Hữu, Huế", "1 Hùng Vương, Đà Nẵng"));
                                     }
                                 }
                             }
@@ -103,24 +118,60 @@ public class DriverSelectionActivity extends AppCompatActivity implements Driver
 
     @Override
     public void onDriverClick(Driver driver) {
-        new AlertDialog.Builder(this)
-                .setTitle("Thông báo")
-                .setMessage("Bạn có muốn phân công tài xế " + driver.getName() + " cho chuyến xe này?")
-                .setPositiveButton("Đồng ý", (dialog, which) -> {
-                    Intent resultIntent = new Intent();
-                    resultIntent.putExtra("selectedDriver", driver);
-                    setResult(RESULT_OK, resultIntent);
-                    finish();
-                })
-                .setNegativeButton("Không", null)
-                .show();
+        showConfirmDialog(driver);
     }
 
-    private void setupBottomNavigation() {
-        View v = findViewById(R.id.nav_home_op_main);
-        if (v != null) v.setOnClickListener(v1 -> {
-            startActivity(new Intent(this, OperatorMainActivity.class));
-            finish();
+    @Override public void onDriverDelete(Driver driver) {}
+
+    private void showConfirmDialog(Driver driver) {
+        View view = getLayoutInflater().inflate(R.layout.dialog_confirm_custom, null);
+        AlertDialog dialog = new AlertDialog.Builder(this).setView(view).create();
+        if (dialog.getWindow() != null) dialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+
+        TextView tvMsg = view.findViewById(R.id.tvDialogMessage);
+        tvMsg.setText("Bạn có muốn phân công tài xế " + driver.getName() + "?");
+
+        view.findViewById(R.id.btnCancel).setOnClickListener(v -> dialog.dismiss());
+        view.findViewById(R.id.btnConfirm).setOnClickListener(v -> {
+            dialog.dismiss();
+            handleAssignment(driver);
         });
+        dialog.show();
+    }
+
+    private void handleAssignment(Driver driver) {
+        if (tripId == null || tripId.isEmpty()) return;
+
+        Map<String, Object> data = new HashMap<>();
+        data.put("ChuyenXeID", tripId);
+        data.put("Taixe", driver.getId()); // Key chuẩn cho server: Taixe
+
+        apiService.updateTripRaw(tripId, data).enqueue(new Callback<Void>() {
+            @Override
+            public void onResponse(Call<Void> call, Response<Void> response) {
+                if (response.isSuccessful()) {
+                    showSuccessDialog();
+                } else {
+                    Log.e(TAG, "Fail code: " + response.code());
+                    Toast.makeText(DriverSelectionActivity.this, "Lỗi cập nhật server!", Toast.LENGTH_SHORT).show();
+                }
+            }
+            @Override public void onFailure(Call<Void> call, Throwable t) {
+                Toast.makeText(DriverSelectionActivity.this, "Lỗi mạng!", Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
+    private void showSuccessDialog() {
+        View view = getLayoutInflater().inflate(R.layout.dialog_success_custom, null);
+        AlertDialog dialog = new AlertDialog.Builder(this).setView(view).create();
+        if (dialog.getWindow() != null) dialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+        dialog.show();
+
+        new Handler().postDelayed(() -> {
+            if (dialog.isShowing()) dialog.dismiss();
+            setResult(RESULT_OK);
+            finish();
+        }, 1500);
     }
 }

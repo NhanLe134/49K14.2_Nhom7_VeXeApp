@@ -53,6 +53,14 @@ public class Trip implements Serializable {
 
     public Trip() {}
 
+    public Trip(String id, String tuyen, String date, String startTime, String status) {
+        this.id = id;
+        this.tuyen = tuyen;
+        this.date = date;
+        this.startTime = startTime;
+        this.status = status;
+    }
+
     public String getId() { return id != null ? id : ""; }
     public void setId(String id) { this.id = id; }
     public String getDate() { return date != null ? date : ""; }

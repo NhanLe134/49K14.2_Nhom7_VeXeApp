@@ -17,6 +17,7 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.nhom7vexeapp.api.ApiClient;
 import com.example.nhom7vexeapp.api.ApiService;
+import com.example.nhom7vexeapp.models.NhaXe;
 import com.example.nhom7vexeapp.models.Trip;
 
 import java.text.SimpleDateFormat;
@@ -55,9 +56,7 @@ public class OperatorMainActivity extends AppCompatActivity {
             loadRealSchedule();
             setupBottomNavigation();
             setupProfileClick();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+        } catch (Exception e) { e.printStackTrace(); }
     }
 
     private void initViews() {
@@ -68,23 +67,22 @@ public class OperatorMainActivity extends AppCompatActivity {
     }
 
     private void loadNhaxeInfo() {
-        apiService.getNhaXeDetail(opUid).enqueue(new Callback<Map<String, Object>>() {
+        apiService.getNhaXeDetail(opUid).enqueue(new Callback<NhaXe>() {
             @Override
-            public void onResponse(Call<Map<String, Object>> call, Response<Map<String, Object>> response) {
+            public void onResponse(Call<NhaXe> call, Response<NhaXe> response) {
                 if (response.isSuccessful() && response.body() != null) {
-                    Map<String, Object> data = response.body();
-                    String name = findValueInMap(data, "Tennhaxe", "TenNhaXe");
+                    NhaXe data = response.body();
+                    String name = data.getBusName();
                     if (tvHeaderName != null) tvHeaderName.setText(name);
                     if (tvBannerName != null) tvBannerName.setText(name);
                     if (tvBannerId != null) tvBannerId.setText("Mã: " + opUid);
                 }
             }
-            @Override public void onFailure(Call<Map<String, Object>> call, Throwable t) {}
+            @Override public void onFailure(Call<NhaXe> call, Throwable t) {}
         });
     }
 
     private void loadRealSchedule() {
-        // ✅ LẤY DỮ LIỆU TỪ BẢNG CHI TIẾT TÀI XẾ ĐỂ CÓ HỌ TÊN
         apiService.getChiTietTaiXe().enqueue(new Callback<List<Map<String, Object>>>() {
             @Override
             public void onResponse(Call<List<Map<String, Object>>> call, Response<List<Map<String, Object>>> response) {
@@ -92,16 +90,12 @@ public class OperatorMainActivity extends AppCompatActivity {
                 if (response.isSuccessful() && response.body() != null) {
                     for (Map<String, Object> d : response.body()) {
                         String nxe = findValueInMap(d, "Nhaxe", "nhaxe", "NhaxeID");
-                        if (nxe.isEmpty() || nxe.equalsIgnoreCase(opUid)) {
-                            myDrivers.add(d);
-                        }
+                        if (nxe.isEmpty() || nxe.equalsIgnoreCase(opUid)) myDrivers.add(d);
                     }
                 }
                 fetchTripsAndBuildTable(myDrivers);
             }
-            @Override public void onFailure(Call<List<Map<String, Object>>> call, Throwable t) {
-                fetchTripsAndBuildTable(new ArrayList<>());
-            }
+            @Override public void onFailure(Call<List<Map<String, Object>>> call, Throwable t) { fetchTripsAndBuildTable(new ArrayList<>()); }
         });
     }
 
@@ -112,9 +106,7 @@ public class OperatorMainActivity extends AppCompatActivity {
                 List<Trip> trips = (response.isSuccessful() && response.body() != null) ? response.body() : new ArrayList<>();
                 buildScheduleTable(drivers, trips);
             }
-            @Override public void onFailure(Call<List<Trip>> call, Throwable t) {
-                buildScheduleTable(drivers, new ArrayList<>());
-            }
+            @Override public void onFailure(Call<List<Trip>> call, Throwable t) { buildScheduleTable(drivers, new ArrayList<>()); }
         });
     }
 
@@ -136,23 +128,19 @@ public class OperatorMainActivity extends AppCompatActivity {
         tlSchedule.addView(headerRow);
 
         for (Map<String, Object> driverMap : drivers) {
-            // ✅ LẤY ID VÀ HỌ TÊN CHUẨN TỪ BẢNG CHITIETTAIXE
-            // driverId dùng để so khớp với chuyến xe (Ví dụ: TAI0002)
-            String driverId = findValueInMap(driverMap, "Taixe", "TaiXe", "TaiXeID", "id");
-            // driverName dùng để hiển thị lên bảng (Ví dụ: Đặng Hay)
-            String driverName = findValueInMap(driverMap, "HoTen", "HOTEN", "Ho_Ten", "hoten", "name");
+            String driverId = findValueInMap(driverMap, "Taixe", "TaiXe", "id");
+            String driverName = findValueInMap(driverMap, "HoTen", "hoten");
 
             TableRow row = new TableRow(this);
             row.setBackgroundColor(Color.WHITE);
 
             TextView tvName = new TextView(this);
-            // HIỂN THỊ: Ưu tiên Họ tên (driverName), nếu rỗng mới hiện ID (driverId)
-            tvName.setText(driverName.isEmpty() ? (driverId.isEmpty() ? "Tài xế" : driverId) : driverName);
+            tvName.setText(driverName.isEmpty() ? driverId : driverName);
             tvName.setPadding(15, 40, 15, 40);
             tvName.setGravity(Gravity.CENTER);
             tvName.setTextColor(Color.BLACK);
             tvName.setTypeface(null, Typeface.BOLD);
-            tvName.setTextSize(13);
+            tvName.setTextSize(12);
             row.addView(tvName);
 
             for (String dateStr : dates) {
@@ -161,26 +149,26 @@ public class OperatorMainActivity extends AppCompatActivity {
                 cell.setPadding(5, 10, 5, 10);
                 cell.setGravity(Gravity.CENTER);
 
-                boolean hasTrip = false;
                 for (Trip trip : allTrips) {
-                    if (trip.getTaiXeID() != null && !driverId.isEmpty() &&
-                            trip.getTaiXeID().equalsIgnoreCase(driverId) &&
-                            trip.getDate().startsWith(dateStr)) {
-
-                        hasTrip = true;
-                        try {
-                            View item = getLayoutInflater().inflate(R.layout.item_schedule_trip, cell, false);
-                            ((TextView)item.findViewById(R.id.tvScheduleTime)).setText(trip.getTime());
-                            ((TextView)item.findViewById(R.id.tvScheduleRoute)).setText(trip.getRouteName().replace("Tuyến: ", ""));
-                            cell.addView(item);
-                        } catch (Exception e) {}
+                    if (trip.getTaiXeID() != null && trip.getTaiXeID().equalsIgnoreCase(driverId) && trip.getDate().startsWith(dateStr)) {
+                        View item = getLayoutInflater().inflate(R.layout.item_schedule_trip, cell, false);
+                        ((TextView)item.findViewById(R.id.tvScheduleTime)).setText(trip.getTime());
+                        ((TextView)item.findViewById(R.id.tvScheduleRoute)).setText(trip.getRouteName().replace("Tuyến: ", ""));
+                        
+                        // ✅ SỬA LỖI: Chuyển sang màn hình chi tiết khi click vào chuyến xe
+                        item.setOnClickListener(v -> {
+                            Intent intent = new Intent(OperatorMainActivity.this, TripDetailActivity.class);
+                            intent.putExtra("trip", trip);
+                            startActivity(intent);
+                        });
+                        
+                        cell.addView(item);
                     }
                 }
-
-                if (!hasTrip) {
+                if (cell.getChildCount() == 0) {
                     TextView tvOff = new TextView(this);
                     tvOff.setText("Nghỉ");
-                    tvOff.setTextSize(11);
+                    tvOff.setTextSize(10);
                     tvOff.setTextColor(Color.LTGRAY);
                     cell.addView(tvOff);
                 }
@@ -207,22 +195,19 @@ public class OperatorMainActivity extends AppCompatActivity {
         tv.setGravity(Gravity.CENTER);
         tv.setTypeface(null, Typeface.BOLD);
         tv.setTextColor(Color.BLACK);
+        tv.setTextSize(12);
         return tv;
     }
 
     private void setupProfileClick() {
-        View profileBtn = findViewById(R.id.imgOpProfile);
-        if (profileBtn != null) profileBtn.setOnClickListener(v -> startActivity(new Intent(this, OperatorProfileActivity.class)));
+        View p = findViewById(R.id.imgOpProfile);
+        if (p != null) p.setOnClickListener(v -> startActivity(new Intent(this, OperatorProfileActivity.class)));
     }
 
     private void setupBottomNavigation() {
-        View btnDriver = findViewById(R.id.nav_driver_op);
-        if (btnDriver != null) btnDriver.setOnClickListener(v -> startActivity(new Intent(this, QLNhaxeActivity.class)));
-        View btnTrip = findViewById(R.id.nav_trip_op);
-        if (btnTrip != null) btnTrip.setOnClickListener(v -> startActivity(new Intent(this, TripListActivity.class)));
-        View btnRoute = findViewById(R.id.nav_route_op);
-        if (btnRoute != null) btnRoute.setOnClickListener(v -> startActivity(new Intent(this, QLTuyenxeActivity.class)));
-        View btnVehicle = findViewById(R.id.nav_vehicle_op);
-        if (btnVehicle != null) btnVehicle.setOnClickListener(v -> startActivity(new Intent(this, PhuongTienManagementActivity.class)));
+        findViewById(R.id.nav_driver_op).setOnClickListener(v -> startActivity(new Intent(this, QLNhaxeActivity.class)));
+        findViewById(R.id.nav_trip_op).setOnClickListener(v -> startActivity(new Intent(this, TripListActivity.class)));
+        findViewById(R.id.nav_route_op).setOnClickListener(v -> startActivity(new Intent(this, QLTuyenxeActivity.class)));
+        findViewById(R.id.nav_vehicle_op).setOnClickListener(v -> startActivity(new Intent(this, PhuongTienManagementActivity.class)));
     }
 }

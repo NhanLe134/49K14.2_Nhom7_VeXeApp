@@ -25,7 +25,7 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.nhom7vexeapp.api.ApiClient;
 import com.example.nhom7vexeapp.api.ApiService;
-import com.example.nhom7vexeapp.api.CustomerResponse;
+import com.example.nhom7vexeapp.models.UserModel;
 
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
@@ -135,12 +135,12 @@ public class CustomerRegisterActivity extends AppCompatActivity {
             return;
         }
 
-        apiService.getUsers().enqueue(new Callback<List<CustomerResponse>>() {
+        apiService.getUsers("Get").enqueue(new Callback<List<UserModel>>() {
             @Override
-            public void onResponse(Call<List<CustomerResponse>> call, Response<List<CustomerResponse>> res) {
+            public void onResponse(Call<List<UserModel>> call, Response<List<UserModel>> res) {
                 int maxNum = 0;
                 if (res.isSuccessful() && res.body() != null) {
-                    for (CustomerResponse u : res.body()) {
+                    for (UserModel u : res.body()) {
                         try {
                             String id = u.getUserID();
                             if (id != null && id.startsWith("US")) {
@@ -157,7 +157,7 @@ public class CustomerRegisterActivity extends AppCompatActivity {
                 
                 createKhachHangProfile(nextUsId, nextKhId, name, dob, phone);
             }
-            @Override public void onFailure(Call<List<CustomerResponse>> call, Throwable t) {
+            @Override public void onFailure(Call<List<UserModel>> call, Throwable t) {
                 createKhachHangProfile("US00001", "KH00001", name, dob, phone);
             }
         });

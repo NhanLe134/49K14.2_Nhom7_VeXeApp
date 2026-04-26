@@ -92,90 +92,79 @@ public class CarTypeAdapter extends RecyclerView.Adapter<CarTypeAdapter.CarTypeV
         EditText edtPrice = dialog.findViewById(R.id.edtNewPrice);
         Button btnSave = dialog.findViewById(R.id.btnSavePrice);
         Button btnCancel = dialog.findViewById(R.id.btnCancelUpdate);
-        ImageView btnClose = dialog.findViewById(R.id.btnCancelUpdateTop);
+        ImageView btnCloseTop = dialog.findViewById(R.id.btnCancelUpdateTop);
 
         tvCarInfo.setText(getDisplayNameBySeats(car.getSoCho()) + " (" + car.getSoCho() + " chỗ)");
-        
+
         try {
             double gia = Double.parseDouble(car.getGiaVe());
             tvCurrentPrice.setText(String.format(Locale.getDefault(), "%,.0f đ", gia));
         } catch (Exception e) {
             tvCurrentPrice.setText(car.getGiaVe() + " đ");
         }
-        tvCurrentPrice.setVisibility(View.VISIBLE);
 
-        btnSave.setOnClickListener(vSave -> {
-            String newPrice = edtPrice.getText().toString().trim();
-            if (newPrice.isEmpty()) {
-                Toast.makeText(context, "Vui lòng nhập giá mới", Toast.LENGTH_SHORT).show();
-                return;
-            }
+        if (btnSave != null) {
+            btnSave.setOnClickListener(vSave -> {
+                String newPrice = edtPrice.getText().toString().trim();
+                if (newPrice.isEmpty()) {
+                    Toast.makeText(context, "Vui lòng nhập giá mới", Toast.LENGTH_SHORT).show();
+                    return;
+                }
 
-            car.setGiaVe(newPrice);
-            String currentDate = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(new Date());
-            car.setNgayCapNhatGia(currentDate);
+                String oldPrice = car.getGiaVe();
+                String oldDate = car.getNgayCapNhatGia();
 
-            ApiService apiService = ApiClient.getClient().create(ApiService.class);
-            apiService.updateLoaixe(car.getLoaixeID(), car).enqueue(new Callback<Loaixe>() {
-                @Override
-                public void onResponse(Call<Loaixe> call, Response<Loaixe> response) {
-                    if (response.isSuccessful()) {
-                        notifyItemChanged(position);
-                        dialog.dismiss();
-                        showSuccessDialog("Cập nhật giá vé thành công");
-                    } else {
-                        Toast.makeText(context, "Lỗi server: " + response.code(), Toast.LENGTH_SHORT).show();
+                car.setGiaVe(newPrice);
+                String currentDate = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(new Date());
+                car.setNgayCapNhatGia(currentDate);
+
+                ApiService apiService = ApiClient.getClient().create(ApiService.class);
+                apiService.updateLoaixe(car.getLoaixeID(), car).enqueue(new Callback<Loaixe>() {
+                    @Override
+                    public void onResponse(Call<Loaixe> call, Response<Loaixe> response) {
+                        if (response.isSuccessful()) {
+                            notifyItemChanged(position);
+                            dialog.dismiss();
+                            showSuccessDialog("Cập nhật giá vé thành công");
+                        } else {
+                            // Rollback local data on failure
+                            car.setGiaVe(oldPrice);
+                            car.setNgayCapNhatGia(oldDate);
+                            Toast.makeText(context, "Lỗi server: " + response.code(), Toast.LENGTH_SHORT).show();
+                        }
                     }
-                }
 
-                @Override
-                public void onFailure(Call<Loaixe> call, Throwable t) {
-                    Toast.makeText(context, "Lỗi kết nối: " + t.getMessage(), Toast.LENGTH_SHORT).show();
-                }
+                    @Override
+                    public void onFailure(Call<Loaixe> call, Throwable t) {
+                        // Rollback local data on failure
+                        car.setGiaVe(oldPrice);
+                        car.setNgayCapNhatGia(oldDate);
+                        Toast.makeText(context, "Lỗi kết nối: " + t.getMessage(), Toast.LENGTH_SHORT).show();
+                    }
+                });
             });
-        });
+        }
 
-        View.OnClickListener cancelListener = v -> showCancelConfirmDialog(dialog);
-        btnCancel.setOnClickListener(cancelListener);
-        if (btnClose != null) btnClose.setOnClickListener(cancelListener);
+        View.OnClickListener closeListener = v -> dialog.dismiss();
+        if (btnCancel != null) btnCancel.setOnClickListener(closeListener);
+        if (btnCloseTop != null) btnCloseTop.setOnClickListener(closeListener);
 
         dialog.show();
     }
 
-    private void showCancelConfirmDialog(Dialog updateDialog) {
-        Dialog cancelDialog = new Dialog(context);
-        cancelDialog.setContentView(R.layout.dialog_cancle_update_price);
-        if (cancelDialog.getWindow() != null) {
-            cancelDialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
-        }
-
-        Button btnNo = cancelDialog.findViewById(R.id.btnNo);
-        Button btnYes = cancelDialog.findViewById(R.id.btnYes);
-
-        btnNo.setOnClickListener(v -> cancelDialog.dismiss());
-        btnYes.setOnClickListener(v -> {
-            cancelDialog.dismiss();
-            updateDialog.dismiss();
-        });
-
-        cancelDialog.show();
-    }
-
     private void showSuccessDialog(String message) {
-        Dialog successDialog = new Dialog(context);
+        Dialog successDialog = new Dialog(this.context);
         successDialog.setContentView(R.layout.dialog_success);
         if (successDialog.getWindow() != null) {
             successDialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
         }
-
-        // ✅ Đã sửa ID tvMessage -> tvSuccessMessage
+        
         TextView tvMessage = successDialog.findViewById(R.id.tvSuccessMessage);
         if (tvMessage != null) {
             tvMessage.setText(message);
         }
 
         successDialog.show();
-
         new Handler().postDelayed(successDialog::dismiss, 2000);
     }
 

@@ -15,6 +15,7 @@ import com.example.nhom7vexeapp.models.Loaixe;
 import com.example.nhom7vexeapp.models.Trip;
 
 import java.util.*;
+import java.text.SimpleDateFormat;
 
 import retrofit2.Call;
 import retrofit2.Callback;
@@ -53,6 +54,9 @@ public class CreateTripActivity extends AppCompatActivity {
             tvFormTitle.setText("CHỈNH SỬA THÔNG TIN CHUYẾN XE");
             btnSave.setText("Cập nhật");
             etDate.setText(editingTrip.getDate());
+            selectedRouteId = editingTrip.getTuyenXeID();
+            selectedVehicleId = editingTrip.getXeID();
+            selectedTime = editingTrip.getTime();
         }
 
         loadCarTypes();
@@ -138,21 +142,21 @@ public class CreateTripActivity extends AppCompatActivity {
 
     private void setupListeners() {
         spRoute.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-            @Override public void onItemSelected(AdapterView<?> p, View v, int pos, long id) { 
-                selectedRouteId = routeIds.get(pos); 
+            @Override public void onItemSelected(AdapterView<?> p, View v, int pos, long id) {
+                selectedRouteId = routeIds.get(pos);
             }
             @Override public void onNothingSelected(AdapterView<?> p) {}
         });
         spVehicle.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override public void onItemSelected(AdapterView<?> p, View v, int pos, long id) {
-                selectedVehicleId = vehicleIds.get(pos); 
+                selectedVehicleId = vehicleIds.get(pos);
                 updateVehicleInfo(pos);
             }
             @Override public void onNothingSelected(AdapterView<?> p) {}
         });
         spTime.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-            @Override public void onItemSelected(AdapterView<?> p, View v, int pos, long id) { 
-                selectedTime = p.getItemAtPosition(pos).toString(); 
+            @Override public void onItemSelected(AdapterView<?> p, View v, int pos, long id) {
+                selectedTime = p.getItemAtPosition(pos).toString();
             }
             @Override public void onNothingSelected(AdapterView<?> p) {}
         });
@@ -178,10 +182,13 @@ public class CreateTripActivity extends AppCompatActivity {
                     if (response.isSuccessful() && response.body() != null) {
                         for (Trip t : response.body()) {
                             try {
-                                String numOnly = t.getId().replaceAll("[^0-9]", "");
-                                if (!numOnly.isEmpty()) {
-                                    int val = Integer.parseInt(numOnly);
-                                    if (val > maxNum) maxNum = val;
+                                String id = t.getId();
+                                if (id != null) {
+                                    String numOnly = id.replaceAll("[^0-9]", "");
+                                    if (!numOnly.isEmpty()) {
+                                        int val = Integer.parseInt(numOnly);
+                                        if (val > maxNum) maxNum = val;
+                                    }
                                 }
                             } catch (Exception e) {}
                         }
@@ -191,7 +198,11 @@ public class CreateTripActivity extends AppCompatActivity {
                 saveTripToServer(finalTripId, dateStr);
             }
             @Override public void onFailure(Call<List<Trip>> call, Throwable t) {
-                saveTripToServer("CX00001", dateStr);
+                if (editingTrip != null) {
+                    saveTripToServer(editingTrip.getId(), dateStr);
+                } else {
+                    saveTripToServer("CX00001", dateStr);
+                }
             }
         });
     }
@@ -206,7 +217,6 @@ public class CreateTripActivity extends AppCompatActivity {
         data.put("GioDen", gioDen);
         data.put("Xe", selectedVehicleId);
         data.put("TuyenXe", selectedRouteId);
-        // ✅ THAY ĐỔI TRẠNG THÁI MẶC ĐỊNH THÀNH "Chưa hoàn thành"
         data.put("TrangThai", (editingTrip != null) ? editingTrip.getStatus() : "Chưa hoàn thành");
 
         if (editingTrip != null && editingTrip.getTaiXeID() != null && !editingTrip.getTaiXeID().isEmpty()) {
@@ -226,7 +236,7 @@ public class CreateTripActivity extends AppCompatActivity {
                         showSuccessDialog();
                     }
                 } else {
-                    Toast.makeText(CreateTripActivity.this, "Lỗi " + response.code(), Toast.LENGTH_SHORT).show();
+                    Toast.makeText(CreateTripActivity.this, "Lỗi server: " + response.code(), Toast.LENGTH_SHORT).show();
                 }
             }
             @Override public void onFailure(Call<Void> call, Throwable t) {
