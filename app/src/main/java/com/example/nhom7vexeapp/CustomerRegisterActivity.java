@@ -2,14 +2,9 @@ package com.example.nhom7vexeapp;
 
 import android.app.DatePickerDialog;
 import android.content.Intent;
-import android.content.SharedPreferences;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.os.Bundle;
-import android.provider.MediaStore;
-import android.util.Base64;
-import android.util.Log;
+import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
@@ -17,23 +12,26 @@ import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
-
 import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.PickVisualMediaRequest;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.nhom7vexeapp.api.ApiClient;
 import com.example.nhom7vexeapp.api.ApiService;
-import com.example.nhom7vexeapp.models.UserModel;
+import com.example.nhom7vexeapp.utils.IdGenerator;
+import com.google.android.material.button.MaterialButton;
 
-import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.util.Calendar;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.Locale;
 
+import okhttp3.MediaType;
+import okhttp3.MultipartBody;
+import okhttp3.RequestBody;
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
@@ -42,30 +40,26 @@ public class CustomerRegisterActivity extends AppCompatActivity {
 
     private LinearLayout layoutStepPhone;
     private ScrollView layoutStepForm;
-    private EditText edtPhoneInput, edtFullName, edtDob;
-    private TextView tvFixedPhone, tvFileName;
-    private Button btnVerifyPhone, btnSelectFile, btnFinish, btnCancel;
+    private EditText edtPhoneInput, edtFullName, edtDob, edtEmail;
+    private TextView tvFixedPhone, tvFileName, tvHeaderTitle;
+    private String verifiedPhone = "";
+    private Uri selectedImageUri = null;
+    private String dateForApi = ""; 
 
-    private String selectedImageBase64 = "";
-    private ApiService apiService;
-
-    private final ActivityResultLauncher<Intent> pickImageLauncher =
-            registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), result -> {
-                if (result.getResultCode() == RESULT_OK && result.getData() != null) {
-                    Uri uri = result.getData().getData();
-                    if (uri != null) {
-                        selectedImageBase64 = encodeImageToBase64(uri);
-                        tvFileName.setText("Đã chọn ảnh thành công");
-                    }
-                }
-            });
+    private ActivityResultLauncher<PickVisualMediaRequest> pickMedia;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_customer_register);
 
-        apiService = ApiClient.getClient().create(ApiService.class);
+        pickMedia = registerForActivityResult(new ActivityResultContracts.PickVisualMedia(), uri -> {
+            if (uri != null) {
+                selectedImageUri = uri;
+                if (tvFileName != null) tvFileName.setText("Đã chọn ảnh đại diện");
+            }
+        });
+
         initViews();
         setupEvents();
     }
@@ -74,288 +68,119 @@ public class CustomerRegisterActivity extends AppCompatActivity {
         layoutStepPhone = findViewById(R.id.layoutStepPhone);
         layoutStepForm = findViewById(R.id.layoutStepForm);
         edtPhoneInput = findViewById(R.id.edtPhoneInput);
-        btnVerifyPhone = findViewById(R.id.btnVerifyPhone);
-
         edtFullName = findViewById(R.id.edtFullName);
         edtDob = findViewById(R.id.edtDob);
+        edtEmail = findViewById(R.id.edtEmailInput);
         tvFixedPhone = findViewById(R.id.tvFixedPhone);
         tvFileName = findViewById(R.id.tvFileName);
-        btnSelectFile = findViewById(R.id.btnSelectFile);
-        btnFinish = findViewById(R.id.btnFinish);
-        btnCancel = findViewById(R.id.btnCancel);
+        tvHeaderTitle = findViewById(R.id.tvHeaderTitle);
     }
 
     private void setupEvents() {
-        btnVerifyPhone.setOnClickListener(v -> {
+        findViewById(R.id.btnBack).setOnClickListener(v -> finish());
+
+        findViewById(R.id.btnVerifyPhone).setOnClickListener(v -> {
             String phone = edtPhoneInput.getText().toString().trim();
             if (phone.length() >= 10) {
                 verifiedPhone = phone;
                 showOtpDialog();
-=======
-    private void saveUserData() {
-        // 1. Tự động sinh KHACHHANGID theo nguyên tắc KHxxxxx
-        String newCustomerId = IdGenerator.generateKhachHangID(this);
+            } else {
+                Toast.makeText(this, "SĐT không hợp lệ", Toast.LENGTH_SHORT).show();
+            }
+        });
 
-        SharedPreferences pref = getSharedPreferences("UserPrefs", MODE_PRIVATE);
-        SharedPreferences.Editor editor = pref.edit();
+        if (edtDob != null) edtDob.setOnClickListener(v -> showDatePicker());
 
-        // 2. Lưu thông tin tài khoản theo SĐT (để login)
-        editor.putString("id_" + verifiedPhone, newCustomerId);
-        editor.putString("name_" + verifiedPhone, edtFullName.getText().toString().trim());
-        editor.putString("dob_" + verifiedPhone, edtDob.getText().toString().trim());
+        findViewById(R.id.btnSelectFile).setOnClickListener(v -> pickMedia.launch(new PickVisualMediaRequest.Builder()
+                .setMediaType(ActivityResultContracts.PickVisualMedia.ImageOnly.INSTANCE).build()));
 
-        // 3. Lưu thông tin phiên đăng nhập hiện tại
-        editor.putString("khachHangID", newCustomerId);
-        editor.putString("customerName", edtFullName.getText().toString().trim());
-        editor.putString("customerPhone", verifiedPhone);
-        editor.apply();
+        findViewById(R.id.btnFinish).setOnClickListener(v -> {
+            if (validateForm()) {
+                saveToDatabaseAndFinish();
+            }
+        });
 
-        Toast.makeText(this, "Đăng ký thành công! Mã của bạn là: " + newCustomerId, Toast.LENGTH_LONG).show();
+        View btnCancel = findViewById(R.id.btnCancel);
+        if (btnCancel != null) btnCancel.setOnClickListener(v -> finish());
+    }
+
+    private void saveToDatabaseAndFinish() {
+        String newId = IdGenerator.generateKhachHangID(this);
+        
+        RequestBody idBody = RequestBody.create(MediaType.parse("text/plain"), newId);
+        RequestBody nameBody = RequestBody.create(MediaType.parse("text/plain"), edtFullName.getText().toString().trim());
+        RequestBody emailBody = RequestBody.create(MediaType.parse("text/plain"), edtEmail.getText().toString().trim());
+        RequestBody dobBody = RequestBody.create(MediaType.parse("text/plain"), dateForApi);
+
+        MultipartBody.Part imagePart = null;
+        if (selectedImageUri != null) {
+            File file = uriToFile(selectedImageUri);
+            if (file != null) {
+                RequestBody requestFile = RequestBody.create(MediaType.parse("image/*"), file);
+                imagePart = MultipartBody.Part.createFormData("anhDaiDienURL", file.getName(), requestFile);
+            }
+        }
+
+        ApiService apiService = ApiClient.getClient().create(ApiService.class);
+        apiService.createKhachHangProfile(idBody, nameBody, emailBody, dobBody, imagePart).enqueue(new Callback<Void>() {
+            @Override
+            public void onResponse(Call<Void> call, Response<Void> response) {
+                if (response.isSuccessful()) {
+                    Toast.makeText(CustomerRegisterActivity.this, "Đăng ký thành công!", Toast.LENGTH_LONG).show();
+                    finish();
+                } else {
+                    Toast.makeText(CustomerRegisterActivity.this, "Lỗi Server: " + response.code(), Toast.LENGTH_SHORT).show();
+                }
+            }
+            @Override
+            public void onFailure(Call<Void> call, Throwable t) {
+                Toast.makeText(CustomerRegisterActivity.this, "Lỗi kết nối Render", Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
+    private File uriToFile(Uri uri) {
+        try {
+            InputStream inputStream = getContentResolver().openInputStream(uri);
+            File file = new File(getCacheDir(), "temp_avatar.jpg");
+            FileOutputStream outputStream = new FileOutputStream(file);
+            byte[] buffer = new byte[1024];
+            int read;
+            while ((read = inputStream.read(buffer)) != -1) {
+                outputStream.write(buffer, 0, read);
+            }
+            outputStream.flush();
+            return file;
+        } catch (Exception e) { return null; }
     }
 
     private void showOtpDialog() {
-        AlertDialog.Builder builder = new AlertDialog.Builder(this);
         View view = LayoutInflater.from(this).inflate(R.layout.dialog_otp, null);
-        builder.setView(view);
-
-        EditText otp1 = view.findViewById(R.id.otp1);
-        EditText otp2 = view.findViewById(R.id.otp2);
-        EditText otp3 = view.findViewById(R.id.otp3);
-        EditText otp4 = view.findViewById(R.id.otp4);
-        EditText otp5 = view.findViewById(R.id.otp5);
-        EditText otp6 = view.findViewById(R.id.otp6);
-        TextView tvOtpError = view.findViewById(R.id.tvOtpError);
-        Button btnVerifyOtp = view.findViewById(R.id.btnVerifyOtp);
-
-        AlertDialog dialog = builder.create();
+        AlertDialog dialog = new AlertDialog.Builder(this).setView(view).create();
         dialog.show();
-
-        setupOtpEntry(otp1, otp2);
-        setupOtpEntry(otp2, otp3);
-        setupOtpEntry(otp3, otp4);
-        setupOtpEntry(otp4, otp5);
-        setupOtpEntry(otp5, otp6);
-
-        otp6.addTextChangedListener(new TextWatcher() {
-            @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
-            @Override
-            public void onTextChanged(CharSequence s, int start, int before, int count) {
-                if (s.length() == 1) btnVerifyOtp.setVisibility(View.VISIBLE);
-            }
-            @Override
-            public void afterTextChanged(Editable s) {}
-        });
-
+        Button btnVerifyOtp = view.findViewById(R.id.btnVerifyOtp);
         btnVerifyOtp.setOnClickListener(v -> {
-            String code = otp1.getText().toString() + otp2.getText().toString() + otp3.getText().toString() +
-                          otp4.getText().toString() + otp5.getText().toString() + otp6.getText().toString();
-
-            if (code.equals("123456")) {
-                dialog.dismiss();
-                moveToForm();
->>>>>>> Stashed changes
-                showOtpDialog(phone);
-            } else {
-                Toast.makeText(this, "SĐT không hợp lệ!", Toast.LENGTH_SHORT).show();
-            }
-        });
-
-        edtDob.setOnClickListener(v -> showDatePicker());
-
-        btnSelectFile.setOnClickListener(v -> {
-            Intent intent = new Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
-            pickImageLauncher.launch(intent);
-        });
-
-        btnFinish.setOnClickListener(v -> handleRegister());
-        btnCancel.setOnClickListener(v -> finish());
-        findViewById(R.id.btnBack).setOnClickListener(v -> finish());
-    }
-
-    private void showOtpDialog(String phone) {
-        AlertDialog.Builder b = new AlertDialog.Builder(this);
-        View v = getLayoutInflater().inflate(R.layout.dialog_otp, null);
-        b.setView(v);
-        final AlertDialog d = b.create();
-        d.show();
-
-        Button btn = v.findViewById(R.id.btnVerifyOtp);
-        if (btn != null) {
-            btn.setOnClickListener(v1 -> {
-                d.dismiss();
-                tvFixedPhone.setText(phone);
-                layoutStepPhone.setVisibility(View.GONE);
-                layoutStepForm.setVisibility(View.VISIBLE);
-            });
-        }
-    }
-
-    private void handleRegister() {
-        String name = edtFullName.getText().toString().trim();
-        String dob = edtDob.getText().toString().trim();
-        String phone = tvFixedPhone.getText().toString();
-
-        if (name.isEmpty() || dob.isEmpty()) {
-            Toast.makeText(this, "Vui lòng nhập đủ thông tin!", Toast.LENGTH_SHORT).show();
-            return;
-        }
-
-        apiService.getUsers("Get").enqueue(new Callback<List<UserModel>>() {
-            @Override
-            public void onResponse(Call<List<UserModel>> call, Response<List<UserModel>> res) {
-                int maxNum = 0;
-                if (res.isSuccessful() && res.body() != null) {
-                    for (UserModel u : res.body()) {
-                        try {
-                            String id = u.getUserID();
-                            if (id != null && id.startsWith("US")) {
-                                String numOnly = id.substring(2);
-                                int n = Integer.parseInt(numOnly);
-                                if (n > maxNum) maxNum = n;
-                            }
-                        } catch (Exception e) {}
-                    }
-                }
-
-                String nextUsId = String.format("US%05d", maxNum + 1);
-                String nextKhId = String.format("KH%05d", maxNum + 1);
-
-                createKhachHangProfile(nextUsId, nextKhId, name, dob, phone);
-            }
-            @Override public void onFailure(Call<List<UserModel>> call, Throwable t) {
-                createKhachHangProfile("US00001", "KH00001", name, dob, phone);
-            }
+            dialog.dismiss();
+            moveToForm();
         });
     }
 
-    private void createKhachHangProfile(final String usId, final String khId, final String name, String dob, final String phone) {
-        Map<String, String> prof = new HashMap<>();
-        prof.put("KhachHangID", khId);
-        prof.put("Hovaten", name);
-        prof.put("Ngaysinh", dob);
-        prof.put("AnhDaiDienURL", selectedImageBase64);
-        prof.put("Email", phone + "@gmail.com");
-
-        apiService.createKhachHangProfile(prof).enqueue(new Callback<Void>() {
-            @Override
-            public void onResponse(Call<Void> call, Response<Void> response) {
-                if (response.isSuccessful()) {
-                    createAuthAccount(usId, khId, phone, name);
-                } else {
-                    createAuthAccount(usId, khId, phone, name);
-                }
-            }
-            @Override public void onFailure(Call<Void> call, Throwable t) {
-                Toast.makeText(CustomerRegisterActivity.this, "Lỗi mạng bước 1", Toast.LENGTH_SHORT).show();
-            }
-        });
-    }
-
-    private void createAuthAccount(final String usId, final String khId, final String phone, final String name) {
-        Map<String, String> auth = new HashMap<>();
-        auth.put("UserID", usId);
-        auth.put("TenDangNhap", phone);
-        auth.put("MatKhau", "123456");
-        auth.put("SoDienThoai", phone);
-        auth.put("Vaitro", "Khachhang");
-        auth.put("KhachHang", khId);
-
-        apiService.registerAuth(auth).enqueue(new Callback<Void>() {
-            @Override
-            public void onResponse(Call<Void> call, Response<Void> response) {
-                if (response.isSuccessful()) {
-                    Toast.makeText(CustomerRegisterActivity.this, "Đăng ký thành công!", Toast.LENGTH_SHORT).show();
-                    saveLoginInfo(usId, khId, name);
-                    finish();
-                } else {
-                    try {
-                        String errorMsg = response.errorBody() != null ? response.errorBody().string() : "";
-                        if (errorMsg.contains("unique") || errorMsg.contains("exists")) {
-                            Toast.makeText(CustomerRegisterActivity.this, "SĐT này đã được đăng ký!", Toast.LENGTH_LONG).show();
-                        } else {
-                            Toast.makeText(CustomerRegisterActivity.this, "Lỗi đăng ký!", Toast.LENGTH_LONG).show();
-                        }
-                    } catch (Exception e) {}
-                }
-            }
-            @Override public void onFailure(Call<Void> call, Throwable t) {}
-        });
-    }
-
-    private void showDatePicker() {
-        Calendar c = Calendar.getInstance();
-        new DatePickerDialog(this, (v, y, m, d) -> edtDob.setText(String.format("%d-%02d-%02d", y, m + 1, d)),
-                c.get(Calendar.YEAR), c.get(Calendar.MONTH), c.get(Calendar.DAY_OF_MONTH)).show();
-    }
-
-    private String encodeImageToBase64(Uri uri) {
-        try {
-            InputStream is = getContentResolver().openInputStream(uri);
-            Bitmap bitmap = BitmapFactory.decodeStream(is);
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            // Nén xuống 15% và dùng NO_WRAP để tránh lỗi chuỗi dài có xuống dòng
-            bitmap.compress(Bitmap.CompressFormat.JPEG, 15, baos);
-            byte[] bytes = baos.toByteArray();
-            return "data:image/jpeg;base64," + Base64.encodeToString(bytes, Base64.NO_WRAP);
-        } catch (Exception e) { return ""; }
     private void moveToForm() {
         layoutStepPhone.setVisibility(View.GONE);
         layoutStepForm.setVisibility(View.VISIBLE);
-<<<<<<< Updated upstream
-        tvFixedPhone.setText(verifiedPhone);
-    }
-
-    private boolean validateForm() {
-        return !edtFullName.getText().toString().isEmpty() && !edtDob.getText().toString().isEmpty();
-=======
-        tvHeaderTitle.setText("Đăng ký tài khoản khách hàng");
+        if (tvHeaderTitle != null) tvHeaderTitle.setText("Đăng ký tài khoản khách hàng");
         tvFixedPhone.setText(verifiedPhone);
     }
 
     private void showDatePicker() {
         Calendar c = Calendar.getInstance();
-        int year = c.get(Calendar.YEAR);
-        int month = c.get(Calendar.MONTH);
-        int day = c.get(Calendar.DAY_OF_MONTH);
-
-        DatePickerDialog datePickerDialog = new DatePickerDialog(this, (view, y, m, d) -> {
-            edtDob.setText(String.format("%02d/%02d/%d", d, m + 1, y));
-            tvErrorDob.setVisibility(View.GONE);
-        }, year, month, day);
-        datePickerDialog.show();
+        new DatePickerDialog(this, (view, y, m, d) -> {
+            edtDob.setText(String.format(Locale.getDefault(), "%02d/%02d/%d", d, m + 1, y));
+            dateForApi = String.format(Locale.getDefault(), "%d-%02d-%02d", y, m + 1, d);
+        }, c.get(Calendar.YEAR), c.get(Calendar.MONTH), c.get(Calendar.DAY_OF_MONTH)).show();
     }
 
     private boolean validateForm() {
-        boolean isValid = true;
-        if (edtFullName.getText().toString().trim().isEmpty()) {
-            edtFullName.setBackgroundResource(R.drawable.bg_input_error);
-            tvErrorFullName.setVisibility(View.VISIBLE);
-            isValid = false;
-        }
-        if (edtDob.getText().toString().trim().isEmpty()) {
-            edtDob.setBackgroundResource(R.drawable.bg_input_error);
-            tvErrorDob.setVisibility(View.VISIBLE);
-            isValid = false;
-        }
-        return isValid;
-    }
-
-    private void handleCancel() {
-        new AlertDialog.Builder(this)
-                .setTitle("Thông báo")
-                .setMessage("Bạn có chắc chắn muốn hủy đăng ký?")
-                .setPositiveButton("Đồng ý", (dialog, which) -> finish())
-                .setNegativeButton("Không", null)
-                .show();
->>>>>>> Stashed changes
-    private void saveLoginInfo(String usId, String khId, String name) {
-        SharedPreferences pref = getSharedPreferences("UserPrefs", MODE_PRIVATE);
-        pref.edit().putBoolean("isLoggedIn", true)
-                   .putString("role", "customer")
-                   .putString("customerUid", khId)
-                   .putString("user_id", usId)
-                   .putString("customerName", name)
-                   .apply();
+        return !edtFullName.getText().toString().isEmpty() && !dateForApi.isEmpty() && !edtEmail.getText().toString().isEmpty();
     }
 }

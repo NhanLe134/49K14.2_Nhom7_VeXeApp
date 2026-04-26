@@ -1,7 +1,5 @@
 package com.example.nhom7vexeapp.adapters;
 
-import android.graphics.Color;
-import android.content.res.ColorStateList;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -38,43 +36,52 @@ public class TripAdapter extends RecyclerView.Adapter<TripAdapter.TripViewHolder
     public void onBindViewHolder(@NonNull TripViewHolder holder, int position) {
         Trip trip = tripList.get(position);
 
-        holder.tvTripId.setText("Mã chuyến: " + trip.getId());
-        holder.tvRouteName.setText(trip.getRouteName());
-        holder.tvVehicle.setText(trip.getVehicleType());
-        holder.tvStatus.setText(trip.getStatus());
-
-        // ✅ CẬP NHẬT MÀU NỀN TRẠNG THÁI THEO HÌNH ẢNH FIGMA (Merge từ File 2)
-        if (trip.getStatus() != null && trip.getStatus().equals("Hoàn thành")) {
-            holder.tvStatus.setBackgroundTintList(ColorStateList.valueOf(Color.parseColor("#E8F5E9")));
-            holder.tvStatus.setTextColor(Color.parseColor("#4CAF50"));
-        } else {
-            holder.tvStatus.setBackgroundTintList(ColorStateList.valueOf(Color.parseColor("#FFF9C4")));
-            holder.tvStatus.setTextColor(Color.parseColor("#FBC02D"));
-        }
-
-        // Kiểm tra null cho tvTimeDate (Merge từ File 1 & 2)
-        if (holder.tvTimeDate != null) {
-            holder.tvTimeDate.setText(trip.getTime() + " | " + trip.getDate());
-        }
-
-        // Xử lý sự kiện nút Sửa
-        holder.btnEdit.setOnClickListener(v -> {
-            if (listener != null) {
-                listener.onEdit(trip, position);
+        if (trip != null && holder != null) {
+            // Hiển thị mã chuyến xe
+            if (holder.tvTripId != null) {
+                holder.tvTripId.setText("Mã chuyến: " + (trip.getId() != null ? trip.getId() : "N/A"));
             }
-        });
 
-        // Xử lý sự kiện click vào item
-        holder.itemView.setOnClickListener(v -> {
-            if (listener != null) {
-                listener.onClick(trip, position);
+            // Hiển thị tên tuyến
+            if (holder.tvRouteName != null) {
+                holder.tvRouteName.setText(trip.getRouteName() != null ? trip.getRouteName() : "Chuyến xe mới");
             }
-        });
+
+            // Hiển thị trạng thái
+            if (holder.tvStatus != null) {
+                holder.tvStatus.setText(trip.getStatus() != null ? trip.getStatus() : "Đang chờ");
+            }
+
+            // Hiển thị thông tin xe
+            if (holder.tvVehicle != null) {
+                holder.tvVehicle.setText(trip.getVehicleType() != null ? trip.getVehicleType() : "Chưa gán xe");
+            }
+
+            // Hiển thị Giờ và Ngày
+            if (holder.tvTimeDate != null) {
+                String timeStr = trip.getTime() != null ? trip.getTime() : "--:--";
+                String dateStr = trip.getDate() != null ? trip.getDate() : "Chưa có ngày";
+                holder.tvTimeDate.setText(timeStr + " | " + dateStr);
+                holder.tvTimeDate.setVisibility(View.VISIBLE);
+            }
+
+            // Sự kiện nút sửa
+            if (holder.btnEdit != null) {
+                holder.btnEdit.setOnClickListener(v -> {
+                    if (listener != null) listener.onEdit(trip, position);
+                });
+            }
+
+            // Sự kiện nhấn vào cả item
+            holder.itemView.setOnClickListener(v -> {
+                if (listener != null) listener.onClick(trip, position);
+            });
+        }
     }
 
     @Override
     public int getItemCount() {
-        return tripList != null ? tripList.size() : 0;
+        return (tripList != null) ? tripList.size() : 0;
     }
 
     public static class TripViewHolder extends RecyclerView.ViewHolder {

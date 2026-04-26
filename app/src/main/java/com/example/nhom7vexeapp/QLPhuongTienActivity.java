@@ -1,105 +1,104 @@
 package com.example.nhom7vexeapp;
 
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Bundle;
-import android.util.Log;
+import android.view.View;
 import android.widget.ImageView;
-import android.widget.LinearLayout;
+import android.widget.ProgressBar;
 import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
-import com.example.nhom7vexeapp.adapters.VehicleAdapter;
-import com.example.nhom7vexeapp.models.Vehicle;
+
+import com.example.nhom7vexeapp.adapters.VehicleManagedAdapter;
+import com.example.nhom7vexeapp.models.VehicleManaged;
+import com.example.nhom7vexeapp.viewmodels.VehicleViewModel;
+
 import java.util.ArrayList;
 import java.util.List;
 
 public class QLPhuongTienActivity extends AppCompatActivity {
 
     private RecyclerView rvVehicles;
-    private VehicleAdapter adapter;
-    private List<Vehicle> vehicleList;
-    private ImageView btnBack;
+    private VehicleManagedAdapter adapter;
+    private List<VehicleManaged> vehicleList = new ArrayList<>();
+    private ProgressBar progressBar;
+    private VehicleViewModel viewModel;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        try {
-            setContentView(R.layout.activity_ql_phuong_tien);
+        setContentView(R.layout.activity_ql_phuong_tien);
 
-            btnBack = findViewById(R.id.btnBack);
-            if (btnBack != null) {
-                btnBack.setOnClickListener(v -> finish());
-            }
+        viewModel = new ViewModelProvider(this).get(VehicleViewModel.class);
 
-            rvVehicles = findViewById(R.id.rvVehicles);
-            if (rvVehicles != null) {
-                rvVehicles.setLayoutManager(new LinearLayoutManager(this));
-                
-                // Chuẩn bị dữ liệu mẫu
-                vehicleList = new ArrayList<>();
-                vehicleList.add(new Vehicle("75B-98603", "Limousine", "Đang bảo trì", 9));
-                vehicleList.add(new Vehicle("43A-14824", "Limousine", "Hoạt động", 9));
-                vehicleList.add(new Vehicle("51G-92372", "Xe 4 chỗ", "Tạm dừng", 4));
-                vehicleList.add(new Vehicle("43B-50812", "Limousine", "Tạm dừng", 9));
-                vehicleList.add(new Vehicle("75A-54592", "Limousine", "Tạm dừng", 9));
-                vehicleList.add(new Vehicle("43B-63614", "Xe 4 chỗ", "Hoạt động", 4));
+        initViews();
+        setupRecyclerView();
+        setupObservers();
 
-                adapter = new VehicleAdapter(vehicleList);
-                rvVehicles.setAdapter(adapter);
-            }
+        SharedPreferences pref = getSharedPreferences("UserPrefs", MODE_PRIVATE);
+        String nhaXeId = pref.getString("op_uid", ""); 
 
-            // Thiết lập Bottom Navigation
-            setupBottomNavigation();
+        if (nhaXeId.isEmpty() || nhaXeId.length() < 7) {
+            nhaXeId = "NX00001"; 
+        }
 
-        } catch (Exception e) {
-            Log.e("QLPhuongTien", "Error in onCreate: " + e.getMessage());
-            Toast.makeText(this, "Lỗi khởi động: " + e.getMessage(), Toast.LENGTH_LONG).show();
-            finish();
+        viewModel.fetchVehicles(nhaXeId);
+    }
+
+    private void initViews() {
+        rvVehicles = findViewById(R.id.rvVehicles);
+        progressBar = findViewById(R.id.progressBarVehicles);
+        ImageView btnBack = findViewById(R.id.btnBack);
+        if (btnBack != null) btnBack.setOnClickListener(v -> finish());
+    }
+
+    private void setupRecyclerView() {
+        if (rvVehicles != null) {
+            rvVehicles.setLayoutManager(new LinearLayoutManager(this));
+            // ĐỒNG BỘ LẠI LISTENER: Sử dụng onShowDetail khớp với Adapter
+            adapter = new VehicleManagedAdapter(vehicleList, this, new VehicleManagedAdapter.OnVehicleActionListener() {
+                @Override
+                public void onDelete(VehicleManaged vehicle, int position) {
+                    viewModel.deleteVehicle(vehicle.getXeID());
+                }
+
+                @Override
+                public void onShowDetail(VehicleManaged vehicle) {
+                    // KÍCH HOẠT MỞ MÀN HÌNH CHI TIẾT
+                    Intent intent = new Intent(QLPhuongTienActivity.this, VehicleDetailActivity.class);
+                    intent.putExtra("vehicle_managed_data", vehicle);
+                    startActivity(intent);
+                }
+            });
+            rvVehicles.setAdapter(adapter);
         }
     }
 
-    private void setupBottomNavigation() {
-        // Tab Trang chủ
-        LinearLayout navHome = findViewById(R.id.nav_home_op);
-        if (navHome != null) {
-            navHome.setOnClickListener(v -> {
-                Intent intent = new Intent(this, OperatorMainActivity.class);
-                intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
-                startActivity(intent);
-            });
-        }
+    private void setupObservers() {
+        viewModel.vehicleList.observe(this, newList -> {
+            if (newList != null) {
+                vehicleList.clear();
+                vehicleList.addAll(newList);
+                adapter.notifyDataSetChanged();
+            }
+        });
 
-        // Tab Tài xế
-        LinearLayout navDriver = findViewById(R.id.nav_driver_op);
-        if (navDriver != null) {
-            navDriver.setOnClickListener(v -> {
-                startActivity(new Intent(this, QLNhaxeActivity.class));
-            });
-        }
+        viewModel.isLoading.observe(this, isLoading -> {
+            if (progressBar != null) progressBar.setVisibility(isLoading ? View.VISIBLE : View.GONE);
+        });
 
-        // Tab Chuyến xe
-        LinearLayout navTrip = findViewById(R.id.nav_trip_op);
-        if (navTrip != null) {
-            navTrip.setOnClickListener(v -> {
-                startActivity(new Intent(this, TripListActivity.class));
-            });
-        }
+        viewModel.errorMessage.observe(this, msg -> {
+            if (msg != null) Toast.makeText(this, msg, Toast.LENGTH_LONG).show();
+        });
 
-        // Tab Tuyến xe
-        LinearLayout navRoute = findViewById(R.id.nav_route_op);
-        if (navRoute != null) {
-            navRoute.setOnClickListener(v -> {
-                startActivity(new Intent(this, QLTuyenxeActivity.class));
-            });
-        }
-
-        // Tab Phương tiện (Hiện tại - Click để reload hoặc cuộn lên đầu)
-        LinearLayout navVehicle = findViewById(R.id.nav_vehicle_op);
-        if (navVehicle != null) {
-            navVehicle.setOnClickListener(v -> {
-                if (rvVehicles != null) rvVehicles.smoothScrollToPosition(0);
-            });
-        }
+        viewModel.isActionSuccess.observe(this, success -> {
+            if (success) {
+                Toast.makeText(this, "Đã cập nhật Database thành công!", Toast.LENGTH_SHORT).show();
+                recreate();
+            }
+        });
     }
 }
