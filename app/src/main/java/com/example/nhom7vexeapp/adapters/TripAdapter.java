@@ -1,5 +1,7 @@
 package com.example.nhom7vexeapp.adapters;
 
+import android.graphics.Color;
+import android.content.res.ColorStateList;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -35,22 +37,34 @@ public class TripAdapter extends RecyclerView.Adapter<TripAdapter.TripViewHolder
     @Override
     public void onBindViewHolder(@NonNull TripViewHolder holder, int position) {
         Trip trip = tripList.get(position);
-        
+
         holder.tvTripId.setText("Mã chuyến: " + trip.getId());
-        holder.tvRouteName.setText(trip.getRouteName()); 
-        holder.tvVehicle.setText(trip.getVehicleType()); 
+        holder.tvRouteName.setText(trip.getRouteName());
+        holder.tvVehicle.setText(trip.getVehicleType());
         holder.tvStatus.setText(trip.getStatus());
-        
+
+        // ✅ CẬP NHẬT MÀU NỀN TRẠNG THÁI THEO HÌNH ẢNH FIGMA (Merge từ File 2)
+        if (trip.getStatus() != null && trip.getStatus().equals("Hoàn thành")) {
+            holder.tvStatus.setBackgroundTintList(ColorStateList.valueOf(Color.parseColor("#E8F5E9")));
+            holder.tvStatus.setTextColor(Color.parseColor("#4CAF50"));
+        } else {
+            holder.tvStatus.setBackgroundTintList(ColorStateList.valueOf(Color.parseColor("#FFF9C4")));
+            holder.tvStatus.setTextColor(Color.parseColor("#FBC02D"));
+        }
+
+        // Kiểm tra null cho tvTimeDate (Merge từ File 1 & 2)
         if (holder.tvTimeDate != null) {
             holder.tvTimeDate.setText(trip.getTime() + " | " + trip.getDate());
         }
 
+        // Xử lý sự kiện nút Sửa
         holder.btnEdit.setOnClickListener(v -> {
             if (listener != null) {
                 listener.onEdit(trip, position);
             }
         });
 
+        // Xử lý sự kiện click vào item
         holder.itemView.setOnClickListener(v -> {
             if (listener != null) {
                 listener.onClick(trip, position);
@@ -60,7 +74,7 @@ public class TripAdapter extends RecyclerView.Adapter<TripAdapter.TripViewHolder
 
     @Override
     public int getItemCount() {
-        return tripList.size();
+        return tripList != null ? tripList.size() : 0;
     }
 
     public static class TripViewHolder extends RecyclerView.ViewHolder {

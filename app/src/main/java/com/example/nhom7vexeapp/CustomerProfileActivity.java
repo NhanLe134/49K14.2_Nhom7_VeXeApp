@@ -22,6 +22,7 @@ import androidx.lifecycle.ViewModelProvider;
 import com.bumptech.glide.Glide;
 import com.example.nhom7vexeapp.api.ApiClient;
 import com.example.nhom7vexeapp.api.ApiService;
+import com.example.nhom7vexeapp.api.CustomerResponse;
 import com.example.nhom7vexeapp.models.KhachHang;
 import com.example.nhom7vexeapp.viewmodels.CustomerViewModel;
 import com.google.android.material.button.MaterialButton;
@@ -34,35 +35,31 @@ import retrofit2.Response;
 
 public class CustomerProfileActivity extends AppCompatActivity {
 
-    private TextView tvName, tvPhone, tvDob;
-    private ImageView btnBack, imgAvatar, btnEditProfileImage;
+    private TextView tvName, tvPhone, tvDob, btnDeleteAccount;
+    private ImageView btnBack, imgAvatar;
+    private View btnEditProfileImage; // Dùng View để tương thích với cả ImageView và CardView
     private MaterialButton btnLogout, btnEditInfo;
-    private TextView btnDeleteAccount;
     private LinearLayout navHome, navSearch, navTickets, navFeedback;
+
     private CustomerViewModel viewModel;
     private ActivityResultLauncher<PickVisualMediaRequest> pickMedia;
+    private String customerUid;
+    private ApiService apiService;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_customer_profile);
 
+        apiService = ApiClient.getClient().create(ApiService.class);
         viewModel = new ViewModelProvider(this).get(CustomerViewModel.class);
 
         initViews();
         setupObservers();
+        setupPickMedia();
+
+        loadInitialData();
         setupEvents();
-
-        pickMedia = registerForActivityResult(new ActivityResultContracts.PickVisualMedia(), uri -> {
-            if (uri != null && imgAvatar != null) {
-                Glide.with(this).load(uri).into(imgAvatar);
-                getSharedPreferences("UserPrefs", MODE_PRIVATE).edit()
-                        .putString("localAvatarUri", uri.toString()).apply();
-                Toast.makeText(this, "Đã cập nhật ảnh đại diện", Toast.LENGTH_SHORT).show();
-            }
-        });
-
-        loadData();
     }
 
     private void initViews() {
@@ -72,7 +69,7 @@ public class CustomerProfileActivity extends AppCompatActivity {
         btnBack = findViewById(R.id.btnBack);
         imgAvatar = findViewById(R.id.imgProfileAvatar);
         btnEditProfileImage = findViewById(R.id.btnEditProfileImage);
-        
+
         btnEditInfo = findViewById(R.id.btnEditProfile);
         btnLogout = findViewById(R.id.btnLogout);
         btnDeleteAccount = findViewById(R.id.btnDeleteAccount);
@@ -83,43 +80,89 @@ public class CustomerProfileActivity extends AppCompatActivity {
         navFeedback = findViewById(R.id.nav_feedback);
     }
 
-    private void loadData() {
-        SharedPreferences pref = getSharedPreferences("UserPrefs", MODE_PRIVATE);
-        
-        String localUri = pref.getString("localAvatarUri", "");
-        if (!localUri.isEmpty() && imgAvatar != null) {
-            Glide.with(this).load(Uri.parse(localUri)).placeholder(R.drawable.logo).into(imgAvatar);
-        }
-
-        String customerUid = pref.getString("customerUid", "");
-        
-        if (!customerUid.isEmpty()) {
-            loadFromDatabase(customerUid);
-        } else {
-            loadLocalData();
-        }
+    private void setupPickMedia() {
+        pickMedia = registerForActivityResult(new ActivityResultContracts.PickVisualMedia(), uri -> {
+            if (uri != null && imgAvatar != null) {
+                Glide.with(this).load(uri).circleCrop().into(imgAvatar);
+                getSharedPreferences("UserPrefs", MODE_PRIVATE).edit()
+                        .putString("localAvatarUri", uri.toString()).apply();
+                Toast.makeText(this, "Đã cập nhật ảnh đại diện cục bộ", Toast.LENGTH_SHORT).show();
+            }
+        });
     }
 
-    private void loadFromDatabase(String uid) {
-        ApiService apiService = ApiClient.getClient().create(ApiService.class);
-        // Sử dụng getProfile để nhận về đối tượng KhachHang chuẩn
-        apiService.getProfile(uid).enqueue(new Callback<KhachHang>() {
+    private void loadInitialData() {
+        SharedPreferences pref = getSharedPreferences("UserPrefs", MODE_PRIVATE);
+        customerUid = pref.getString("customerUid", "");
+        if (customerUid.isEmpty()) customerUid = pref.getString("user_id", "");
+
+        if (customerUid.isEmpty()) {
+            Toast.makeText(this, "Vui lòng đăng nhập lại!", Toast.LENGTH_SHORT).show();
+            handleLogout();
+            return;
+        }
+
+        // Hiển thị dữ liệu tạm thời từ SharedPreferences
+        tvName.setText(pref.getString("customerName", "Khách hàng"));
+        tvPhone.setText(pref.getString("customerPhone", ""));
+        tvDob.setText(pref.getString("customerDob", "Chưa cập nhật"));
+
+        String localUri = pref.getString("localAvatarUri", "");
+        if (!localUri.isEmpty() && imgAvatar != null) {
+            Glide.with(this).load(Uri.parse(localUri)).circleCrop().placeholder(R.drawable.nhaxe_home).into(imgAvatar);
+        }
+
+        // Gọi API cập nhật dữ liệu mới nhất
+        loadAllDataFromServer(customerUid);
+    }
+
+    private void loadAllDataFromServer(String uid) {
+        // Cách 1: Load Map Detail (Từ File 2 - linh hoạt cho động)
+        apiService.getKhachHangDetail(uid).enqueue(new Callback<Map<String, Object>>() {
             @Override
-            public void onResponse(Call<KhachHang> call, Response<KhachHang> response) {
+            public void onResponse(Call<Map<String, Object>> call, Response<Map<String, Object>> response) {
                 if (response.isSuccessful() && response.body() != null) {
-                    KhachHang customer = response.body();
-                    tvName.setText(customer.getHoTen() != null ? customer.getHoTen() : "Chưa cập nhật");
-                    tvDob.setText(customer.getNgaySinh() != null ? customer.getNgaySinh() : "Chưa cập nhật");
-                    
-                    // Cập nhật SĐT từ SharedPreferences nếu trên DB chưa có
-                    SharedPreferences pref = getSharedPreferences("UserPrefs", MODE_PRIVATE);
-                    tvPhone.setText(pref.getString("customerPhone", ""));
+                    Map<String, Object> data = response.body();
+
+                    String name = findValue(data, "Hovaten", "TenKhachHang", "HoTen");
+                    if (!name.isEmpty()) tvName.setText(name);
+
+                    String dob = findValue(data, "Ngaysinh", "NgaySinh");
+                    if (!dob.isEmpty()) {
+                        // Chuẩn hóa định dạng ngày nếu cần
+                        if (dob.contains("-")) {
+                            try {
+                                String[] parts = dob.split("T")[0].split("-");
+                                if (parts.length == 3) dob = parts[2] + "/" + parts[1] + "/" + parts[0];
+                            } catch (Exception e) {}
+                        }
+                        tvDob.setText(dob);
+                    }
+
+                    String imgData = findValue(data, "AnhDaiDien", "AnhDaiDienURL", "Avatar");
+                    if (!imgData.isEmpty() && imgAvatar != null) {
+                        Glide.with(CustomerProfileActivity.this).load(imgData).circleCrop().into(imgAvatar);
+                    }
+                }
+                // Luôn gọi thêm Auth Detail để lấy SĐT (thường ở bảng khác)
+                fetchPhoneFromAuth(uid);
+            }
+            @Override public void onFailure(Call<Map<String, Object>> call, Throwable t) {
+                fetchPhoneFromAuth(uid);
+            }
+        });
+    }
+
+    private void fetchPhoneFromAuth(String uid) {
+        apiService.getUserAuthDetail(uid).enqueue(new Callback<CustomerResponse>() {
+            @Override
+            public void onResponse(Call<CustomerResponse> call, Response<CustomerResponse> response) {
+                if (response.isSuccessful() && response.body() != null) {
+                    String phone = response.body().getSdt();
+                    if (phone != null && !phone.isEmpty()) tvPhone.setText(phone);
                 }
             }
-            @Override public void onFailure(Call<KhachHang> call, Throwable t) {
-                Log.e("API_ERROR", "Load profile failed: " + t.getMessage());
-                loadLocalData();
-            }
+            @Override public void onFailure(Call<CustomerResponse> call, Throwable t) {}
         });
     }
 
@@ -130,7 +173,6 @@ public class CustomerProfileActivity extends AppCompatActivity {
                 if (khachHang.getNgaySinh() != null) tvDob.setText(khachHang.getNgaySinh());
             }
         });
-
         viewModel.errorMessage.observe(this, msg -> {
             if (msg != null) Toast.makeText(this, msg, Toast.LENGTH_SHORT).show();
         });
@@ -138,23 +180,24 @@ public class CustomerProfileActivity extends AppCompatActivity {
 
     private void setupEvents() {
         if (btnBack != null) btnBack.setOnClickListener(v -> finish());
+        if (navHome != null) navHome.setOnClickListener(v -> finish());
 
-        View.OnClickListener pickImgClick = v -> pickMedia.launch(new PickVisualMediaRequest.Builder()
-                .setMediaType(ActivityResultContracts.PickVisualMedia.ImageOnly.INSTANCE).build());
-        
-        if (imgAvatar != null) imgAvatar.setOnClickListener(pickImgClick);
-        if (btnEditProfileImage != null) btnEditProfileImage.setOnClickListener(pickImgClick);
+        // Hợp nhất logic đổi ảnh: Click ảnh để chọn ảnh, Click bút để vào trang Edit
+        if (imgAvatar != null) {
+            imgAvatar.setOnClickListener(v -> pickMedia.launch(new PickVisualMediaRequest.Builder()
+                    .setMediaType(ActivityResultContracts.PickVisualMedia.ImageOnly.INSTANCE).build()));
+        }
 
-        if (btnEditInfo != null) {
-            btnEditInfo.setOnClickListener(v -> {
+        if (btnEditProfileImage != null || btnEditInfo != null) {
+            View.OnClickListener toEdit = v -> {
                 Intent intent = new Intent(this, EditCustomerProfileActivity.class);
                 startActivityForResult(intent, 300);
-            });
+            };
+            if (btnEditProfileImage != null) btnEditProfileImage.setOnClickListener(toEdit);
+            if (btnEditInfo != null) btnEditInfo.setOnClickListener(toEdit);
         }
 
-        if (btnLogout != null) {
-            btnLogout.setOnClickListener(v -> handleLogout());
-        }
+        if (btnLogout != null) btnLogout.setOnClickListener(v -> handleLogout());
 
         if (btnDeleteAccount != null) {
             btnDeleteAccount.setOnClickListener(v -> {
@@ -165,15 +208,11 @@ public class CustomerProfileActivity extends AppCompatActivity {
                         .setNegativeButton("Hủy", null).show();
             });
         }
-
-        if (navHome != null) navHome.setOnClickListener(v -> finish());
     }
 
     private void deleteAccount() {
-        String uid = getSharedPreferences("UserPrefs", MODE_PRIVATE).getString("customerUid", "");
-        if (uid.isEmpty()) return;
-
-        ApiClient.getClient().create(ApiService.class).deleteKhachHang(uid).enqueue(new Callback<Void>() {
+        if (customerUid.isEmpty()) return;
+        apiService.deleteKhachHang(customerUid).enqueue(new Callback<Void>() {
             @Override
             public void onResponse(Call<Void> call, Response<Void> response) {
                 Toast.makeText(CustomerProfileActivity.this, "Đã xóa tài khoản", Toast.LENGTH_SHORT).show();
@@ -193,16 +232,21 @@ public class CustomerProfileActivity extends AppCompatActivity {
         finish();
     }
 
-    private void loadLocalData() {
-        SharedPreferences pref = getSharedPreferences("UserPrefs", MODE_PRIVATE);
-        tvName.setText(pref.getString("customerName", "Khách hàng"));
-        tvPhone.setText(pref.getString("customerPhone", ""));
-        tvDob.setText(pref.getString("customerDob", ""));
+    private String findValue(Map<String, Object> map, String... keys) {
+        for (String key : keys) {
+            if (map.containsKey(key) && map.get(key) != null) {
+                String val = map.get(key).toString();
+                if (!val.equalsIgnoreCase("null") && !val.isEmpty()) return val;
+            }
+        }
+        return "";
     }
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        if (requestCode == 300 && resultCode == RESULT_OK) loadData();
+        if (requestCode == 300 && resultCode == RESULT_OK) {
+            loadAllDataFromServer(customerUid);
+        }
     }
 }
