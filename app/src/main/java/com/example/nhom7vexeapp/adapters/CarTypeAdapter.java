@@ -91,6 +91,8 @@ public class CarTypeAdapter extends RecyclerView.Adapter<CarTypeAdapter.CarTypeV
         TextView tvCurrentPrice = dialog.findViewById(R.id.tvDialogCurrentPrice);
         EditText edtPrice = dialog.findViewById(R.id.edtNewPrice);
         Button btnSave = dialog.findViewById(R.id.btnSavePrice);
+        Button btnCancel = dialog.findViewById(R.id.btnCancelUpdate);
+        ImageView btnCancelTop = dialog.findViewById(R.id.btnCancelUpdateTop);
 
         tvCarInfo.setText(getDisplayNameBySeats(car.getSoCho()) + " (" + car.getSoCho() + " chỗ)");
         
@@ -101,6 +103,10 @@ public class CarTypeAdapter extends RecyclerView.Adapter<CarTypeAdapter.CarTypeV
             tvCurrentPrice.setText(car.getGiaVe() + " đ");
         }
 
+        View.OnClickListener cancelListener = v -> showCancelConfirmDialog(dialog);
+        if (btnCancel != null) btnCancel.setOnClickListener(cancelListener);
+        if (btnCancelTop != null) btnCancelTop.setOnClickListener(cancelListener);
+
         if (btnSave != null) {
             btnSave.setOnClickListener(vSave -> {
                 String newPrice = edtPrice.getText().toString().trim();
@@ -109,32 +115,57 @@ public class CarTypeAdapter extends RecyclerView.Adapter<CarTypeAdapter.CarTypeV
                     return;
                 }
 
+                String oldPrice = car.getGiaVe();
+                String oldDate = car.getNgayCapNhatGia();
+
                 car.setGiaVe(newPrice);
                 String currentDate = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(new Date());
                 car.setNgayCapNhatGia(currentDate);
 
                 ApiService apiService = ApiClient.getClient().create(ApiService.class);
-                // Đổi Callback sang List<Loaixe>
-                apiService.updateLoaixe(car.getLoaixeID(), car).enqueue(new Callback<List<Loaixe>>() {
+                apiService.updateLoaixe(car.getLoaixeID(), car).enqueue(new Callback<Loaixe>() {
                     @Override
-                    public void onResponse(Call<List<Loaixe>> call, Response<List<Loaixe>> response) {
+                    public void onResponse(Call<Loaixe> call, Response<Loaixe> response) {
                         if (response.isSuccessful()) {
                             notifyItemChanged(position);
                             dialog.dismiss();
                             showSuccessDialog("Cập nhật giá vé thành công");
                         } else {
+                            car.setGiaVe(oldPrice);
+                            car.setNgayCapNhatGia(oldDate);
                             Toast.makeText(context, "Lỗi server: " + response.code(), Toast.LENGTH_SHORT).show();
                         }
                     }
 
                     @Override
-                    public void onFailure(Call<List<Loaixe>> call, Throwable t) {
+                    public void onFailure(Call<Loaixe> call, Throwable t) {
+                        car.setGiaVe(oldPrice);
+                        car.setNgayCapNhatGia(oldDate);
                         Toast.makeText(context, "Lỗi kết nối", Toast.LENGTH_SHORT).show();
                     }
                 });
             });
         }
         dialog.show();
+    }
+
+    private void showCancelConfirmDialog(Dialog updateDialog) {
+        Dialog cancelDialog = new Dialog(context);
+        cancelDialog.setContentView(R.layout.dialog_cancle_update_price);
+        if (cancelDialog.getWindow() != null) {
+            cancelDialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+        }
+
+        Button btnNo = cancelDialog.findViewById(R.id.btnNo);
+        Button btnYes = cancelDialog.findViewById(R.id.btnYes);
+
+        if (btnNo != null) btnNo.setOnClickListener(v -> cancelDialog.dismiss());
+        if (btnYes != null) btnYes.setOnClickListener(v -> {
+            cancelDialog.dismiss();
+            updateDialog.dismiss();
+        });
+
+        cancelDialog.show();
     }
 
     private void showSuccessDialog(String message) {

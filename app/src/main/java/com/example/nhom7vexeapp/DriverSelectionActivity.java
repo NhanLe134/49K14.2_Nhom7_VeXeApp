@@ -14,6 +14,7 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -89,6 +90,7 @@ public class DriverSelectionActivity extends AppCompatActivity implements Driver
             createDriverLauncher.launch(intent);
         });
 
+        setupBottomNavigation();
         loadRealData();
     }
 
@@ -100,6 +102,39 @@ public class DriverSelectionActivity extends AppCompatActivity implements Driver
         rvDrivers.setLayoutManager(new LinearLayoutManager(this));
         adapter = new DriverAdapter(driverList, this);
         rvDrivers.setAdapter(adapter);
+    }
+
+    private void setupBottomNavigation() {
+        // Trang chủ -> OperatorMainActivity
+        View navHome = findViewById(R.id.nav_home_op_main);
+        if (navHome != null) {
+            navHome.setOnClickListener(v -> {
+                Intent intent = new Intent(this, OperatorMainActivity.class);
+                intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+                startActivity(intent);
+            });
+        }
+
+        // Phương tiện -> PhuongTienManagementActivity
+        View navVehicle = findViewById(R.id.nav_vehicle_op);
+        if (navVehicle != null) {
+            navVehicle.setOnClickListener(v -> {
+                Intent intent = new Intent(this, PhuongTienManagementActivity.class);
+                startActivity(intent);
+            });
+        }
+
+        // Chuyến xe -> TripListActivity
+        View navTrip = findViewById(R.id.nav_trip_op);
+        if (navTrip != null) {
+            navTrip.setOnClickListener(v -> startActivity(new Intent(this, TripListActivity.class)));
+        }
+
+        // Tuyến xe -> QLTuyenxeActivity
+        View navRoute = findViewById(R.id.nav_route_op);
+        if (navRoute != null) {
+            navRoute.setOnClickListener(v -> startActivity(new Intent(this, QLTuyenxeActivity.class)));
+        }
     }
 
     private void loadRealData() {

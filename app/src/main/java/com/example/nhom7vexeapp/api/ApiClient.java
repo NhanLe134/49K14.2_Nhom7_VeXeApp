@@ -7,7 +7,7 @@ import java.util.concurrent.TimeUnit;
 
 public class ApiClient {
     // Đảm bảo URL kết thúc bằng dấu /
-    private static final String BASE_URL = "https://api-vexeapp.onrender.com/"; 
+    private static final String BASE_URL = "https://api-vexeapp.onrender.com/";
     private static Retrofit retrofit = null;
 
     public static Retrofit getClient() {

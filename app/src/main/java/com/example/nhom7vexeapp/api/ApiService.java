@@ -80,7 +80,7 @@ public interface ApiService {
    Call<List<Loaixe>> getLoaixe();
 
    @PUT("api/loaixe/{id}/")
-   Call<List<Loaixe>> updateLoaixe(@Path("id") String id, @Body Loaixe loaixe);
+   Call<Loaixe> updateLoaixe(@Path("id") String id, @Body Loaixe loaixe);
 
    // --- TUYẾN XE ---
    @GET("api/tuyenxe/")
