@@ -479,8 +479,27 @@ public class QLVeXeActivity extends AppCompatActivity implements TicketAdapter.O
             if (rbCash.isChecked()) {
                 showPaymentSuccessDialog("Vui lòng chuẩn bị tiền khi lên xe");
             } else {
-                showQrPaymentDialog(ticket);
+                showFeatureUpcomingDialog();
             }
+        });
+
+        dialog.show();
+    }
+
+    private void showFeatureUpcomingDialog() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        View view = LayoutInflater.from(this).inflate(R.layout.dialog_feature_upcoming, null);
+        Button btnOk = view.findViewById(R.id.btnUpcomingOk);
+
+        AlertDialog dialog = builder.setView(view).create();
+        if (dialog.getWindow() != null) {
+            dialog.getWindow().setBackgroundDrawableResource(android.R.color.transparent);
+        }
+
+        btnOk.setOnClickListener(v -> {
+            dialog.dismiss();
+            // Điều hướng quay lại trang quản lý vé (làm mới lại tab hiện tại)
+            switchTab("Đã đặt");
         });
 
         dialog.show();
@@ -494,7 +513,7 @@ public class QLVeXeActivity extends AppCompatActivity implements TicketAdapter.O
         TextView tvCode = view.findViewById(R.id.tvQrTicketCode);
         TextView tvRoute = view.findViewById(R.id.tvQrRoute);
         TextView tvDate = view.findViewById(R.id.tvQrDate);
-        TextView tvTime = view.findViewById(R.id.tvTime);
+        TextView tvTime = view.findViewById(R.id.tvQrTime);
         TextView tvSeats = view.findViewById(R.id.tvQrSeats);
         TextView tvTotal = view.findViewById(R.id.tvQrTotal);
         Button btnCancel = view.findViewById(R.id.btnQrCancel);

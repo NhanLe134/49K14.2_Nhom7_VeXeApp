@@ -84,7 +84,6 @@ public class VeResultsActivity extends AppCompatActivity {
         if (progressBar != null) progressBar.setVisibility(View.VISIBLE);
         tvNoResult.setVisibility(View.GONE);
 
-        // Đã sửa đổi để khớp với List<TripSearchResult> từ ApiService
         apiService.getChuyenXe().enqueue(new Callback<List<TripSearchResult>>() {
             @Override
             public void onResponse(Call<List<TripSearchResult>> call, Response<List<TripSearchResult>> response) {
@@ -99,7 +98,7 @@ public class VeResultsActivity extends AppCompatActivity {
                     }
                 } else {
                     Log.e("API_ERROR", "Response Code: " + response.code());
-                    Toast.makeText(VeResultsActivity.this, "Lỗi khi lấy dữ liệu! (Code: " + response.code() + ")", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(VeResultsActivity.this, "Lỗi khi lấy dữ liệu!", Toast.LENGTH_SHORT).show();
                     showNoResults();
                 }
             }
@@ -107,8 +106,7 @@ public class VeResultsActivity extends AppCompatActivity {
             @Override
             public void onFailure(Call<List<TripSearchResult>> call, Throwable t) {
                 if (progressBar != null) progressBar.setVisibility(View.GONE);
-                Log.e("API_ERROR", "Message: " + t.getMessage(), t);
-                Toast.makeText(VeResultsActivity.this, "Lỗi kết nối server! " + t.getMessage(), Toast.LENGTH_LONG).show();
+                Toast.makeText(VeResultsActivity.this, "Lỗi kết nối server!", Toast.LENGTH_LONG).show();
                 showNoResults();
             }
         });
@@ -125,10 +123,16 @@ public class VeResultsActivity extends AppCompatActivity {
         String formattedSearchDate = convertDateFormat(sDate);
 
         for (TripSearchResult trip : allTrips) {
-            // Kiểm tra null cho date và time từ server
+            // Lọc trạng thái: Chỉ lấy những chuyến "Chưa hoàn thành"
+            String status = trip.getStatus();
+            if (status != null && !status.equalsIgnoreCase("Chưa hoàn thành")) {
+                continue;
+            }
+
             String tripDate = trip.getDate() != null ? trip.getDate() : "";
             String tripTime = trip.getTime() != null ? trip.getTime() : "00:00";
 
+            // Lọc thời gian thực tế: Không hiển thị chuyến trong quá khứ
             if (tripDate.compareTo(nowStrDate) < 0) continue;
             if (tripDate.equals(nowStrDate) && tripTime.compareTo(nowStrTime) < 0) continue;
 
