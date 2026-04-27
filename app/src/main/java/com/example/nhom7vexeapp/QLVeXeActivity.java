@@ -27,7 +27,9 @@ import com.google.android.material.card.MaterialCardView;
 
 import java.text.DecimalFormat;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import retrofit2.Call;
 import retrofit2.Callback;
@@ -417,6 +419,57 @@ public class QLVeXeActivity extends AppCompatActivity implements TicketAdapter.O
 
     @Override
     public void onCancelClick(Ticket ticket) {
-        // Logic hủy vé sẽ được triển khai sau
+        showCancelConfirmationDialog(ticket);
+    }
+
+    private void showCancelConfirmationDialog(Ticket ticket) {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        View dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_cancel_booking, null);
+        builder.setView(dialogView);
+        AlertDialog dialog = builder.create();
+        if (dialog.getWindow() != null) {
+            dialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+        }
+
+        dialogView.findViewById(R.id.btnCancelNo).setOnClickListener(v -> dialog.dismiss());
+        dialogView.findViewById(R.id.btnCancelYes).setOnClickListener(v -> {
+            dialog.dismiss();
+            processCancelTicket(ticket);
+        });
+        dialog.show();
+    }
+
+    private void processCancelTicket(Ticket ticket) {
+        progressBar.setVisibility(View.VISIBLE);
+        
+        // DỰA TRÊN HuyVeSerializer: Chỉ cần gửi ve_id, Server sẽ tự làm hết
+        Map<String, Object> data = new HashMap<>();
+        data.put("ve_id", ticket.getVeID());
+
+        Log.d("HUY_VE_LOG", "Gửi ve_id: " + ticket.getVeID());
+
+        apiService.createVeHuy(data).enqueue(new Callback<Map<String, String>>() {
+            @Override
+            public void onResponse(Call<Map<String, String>> call, Response<Map<String, String>> response) {
+                progressBar.setVisibility(View.GONE);
+                if (response.isSuccessful()) {
+                    Toast.makeText(QLVeXeActivity.this, "Hủy vé thành công!", Toast.LENGTH_SHORT).show();
+                    loadTickets(); // Reload để thấy vé mới trong tab "Đã hủy"
+                } else {
+                    try {
+                        String errorMsg = response.errorBody() != null ? response.errorBody().string() : "Unknown error";
+                        Log.e("HUY_VE_LOG", "Lỗi: " + response.code() + " - " + errorMsg);
+                        Toast.makeText(QLVeXeActivity.this, "Lỗi Server: " + errorMsg, Toast.LENGTH_LONG).show();
+                    } catch (Exception e) { e.printStackTrace(); }
+                }
+            }
+
+            @Override
+            public void onFailure(Call<Map<String, String>> call, Throwable t) {
+                progressBar.setVisibility(View.GONE);
+                Log.e("HUY_VE_LOG", "Failure: ", t);
+                Toast.makeText(QLVeXeActivity.this, "Lỗi kết nối server!", Toast.LENGTH_SHORT).show();
+            }
+        });
     }
 }

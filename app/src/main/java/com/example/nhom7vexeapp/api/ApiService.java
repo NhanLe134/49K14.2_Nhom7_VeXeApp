@@ -173,8 +173,9 @@ public interface ApiService {
     @GET("api/ve-huy/")
     Call<List<Ticket>> getVeHuy(@Query("KhachHang") String khachHangId);
 
-    @POST("api/ve-huy/")
-    Call<Void> createVeHuy(@Body Map<String, Object> data);
+    // Endpoint Thực hiện hủy vé (Sử dụng HuyVeSerializer)
+    @POST("api/huy-ve/")
+    Call<Map<String, String>> createVeHuy(@Body Map<String, Object> data);
 
     @GET("api/khachhang/{id}/lich-su-ve/")
     Call<List<TicketModel>> getTicketHistory(@Path("id") String id);

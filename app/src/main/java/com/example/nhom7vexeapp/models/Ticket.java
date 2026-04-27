@@ -5,7 +5,7 @@ import java.io.Serializable;
 import java.util.List;
 
 public class Ticket implements Serializable {
-    @SerializedName("VeID")
+    @SerializedName(value = "VeID", alternate = {"VeHuyID"})
     private String veID;
 
     @SerializedName("TenTuyen")
@@ -24,7 +24,7 @@ public class Ticket implements Serializable {
     private int soLuongGhe;
 
     @SerializedName("DanhSachGhe")
-    private List<String> danhSachGhe;
+    private Object danhSachGhe; // Có thể là List<String> hoặc String từ bảng VeHuy
 
     @SerializedName("TongTien")
     private double tongTien;
@@ -47,7 +47,7 @@ public class Ticket implements Serializable {
     public String getNgayKhoiHanh() { return ngayKhoiHanh; }
     public String getGioDi() { return gioDi; }
     public int getSoLuongGhe() { return soLuongGhe; }
-    public List<String> getDanhSachGhe() { return danhSachGhe; }
+    
     public double getTongTien() { return tongTien; }
     public String getTrangThai() { return trangThai; }
     public String getTrangThaiThanhToan() { return trangThaiThanhToan; }
@@ -55,17 +55,29 @@ public class Ticket implements Serializable {
     public String getChuyenXeID() { return chuyenXeID; }
 
     public String getOwnerId() {
-        // Trả về ID khách hàng, đảm bảo không null và đã trim
         return (khachHangID != null) ? khachHangID.trim() : "";
     }
 
     public String getFormattedSeats() {
-        if (danhSachGhe == null || danhSachGhe.isEmpty()) return "N/A";
-        StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < danhSachGhe.size(); i++) {
-            sb.append(danhSachGhe.get(i));
-            if (i < danhSachGhe.size() - 1) sb.append(", ");
+        if (danhSachGhe == null) return "N/A";
+        if (danhSachGhe instanceof String) {
+            return (String) danhSachGhe;
         }
-        return sb.toString();
+        if (danhSachGhe instanceof List) {
+            List<String> list = (List<String>) danhSachGhe;
+            if (list.isEmpty()) return "N/A";
+            StringBuilder sb = new StringBuilder();
+            for (int i = 0; i < list.size(); i++) {
+                sb.append(list.get(i));
+                if (i < list.size() - 1) sb.append(", ");
+            }
+            return sb.toString();
+        }
+        return "N/A";
+    }
+
+    public List<String> getDanhSachGhe() {
+        if (danhSachGhe instanceof List) return (List<String>) danhSachGhe;
+        return null;
     }
 }
