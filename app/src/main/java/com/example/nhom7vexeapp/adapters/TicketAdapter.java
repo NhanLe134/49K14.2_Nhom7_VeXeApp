@@ -42,7 +42,16 @@ public class TicketAdapter extends RecyclerView.Adapter<TicketAdapter.TicketView
     @Override
     public void onBindViewHolder(@NonNull TicketViewHolder holder, int position) {
         Ticket ticket = ticketList.get(position);
-        holder.tvTime.setText(ticket.getGioDi());
+        
+        // Định dạng lại thời gian: chỉ lấy hh:mm (bỏ giây)
+        String rawTime = ticket.getGioDi();
+        if (rawTime != null && rawTime.contains(":") && rawTime.split(":").length >= 2) {
+            String[] parts = rawTime.split(":");
+            holder.tvTime.setText(parts[0] + ":" + parts[1]);
+        } else {
+            holder.tvTime.setText(rawTime);
+        }
+
         holder.tvDate.setText(ticket.getNgayKhoiHanh());
         holder.tvRoute.setText(ticket.getTenTuyen());
         holder.tvCar.setText(ticket.getTenNhaXe());
