@@ -56,7 +56,6 @@ public class AssignDriverActivity extends AppCompatActivity implements AssignDri
     }
 
     private void loadDriversForAssign() {
-        // Bước 1: Lấy danh sách User để lấy SĐT
         apiService.getUsers("Get").enqueue(new Callback<List<UserModel>>() {
             @Override
             public void onResponse(Call<List<UserModel>> call, Response<List<UserModel>> resU) {
@@ -67,7 +66,6 @@ public class AssignDriverActivity extends AppCompatActivity implements AssignDri
                     }
                 }
 
-                // Bước 2: Lấy chi tiết tài xế thuộc nhà xe này
                 apiService.getChiTietTaiXe().enqueue(new Callback<List<Map<String, Object>>>() {
                     @Override
                     public void onResponse(Call<List<Map<String, Object>>> call, Response<List<Map<String, Object>>> resC) {
@@ -145,15 +143,32 @@ public class AssignDriverActivity extends AppCompatActivity implements AssignDri
     private void showSuccessDialog() {
         final Dialog dialog = new Dialog(this);
         dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
-        dialog.setContentView(R.layout.dialog_assign_success);
-        if (dialog.getWindow() != null) dialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+        dialog.setContentView(R.layout.dialog_success); // Sử dụng dialog_success đồng bộ
+        if (dialog.getWindow() != null) {
+            dialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+        }
+
+        TextView tvMsg = dialog.findViewById(R.id.tvMessage);
+        if (tvMsg != null) {
+            tvMsg.setText("Phân công tài xế thành công");
+        }
+
+        dialog.setCancelable(true);
+        dialog.setCanceledOnTouchOutside(true);
+        
+        // Khi nhấn vào popup sẽ quay về màn hình Chi tiết chuyến xe
+        dialog.setOnDismissListener(d -> {
+            setResult(RESULT_OK);
+            finish();
+        });
+
         dialog.show();
 
         new Handler().postDelayed(() -> {
-            dialog.dismiss();
-            setResult(RESULT_OK);
-            finish();
-        }, 1500);
+            if (dialog.isShowing()) {
+                dialog.dismiss();
+            }
+        }, 2000);
     }
 
     private void setupBottomNavigation() {

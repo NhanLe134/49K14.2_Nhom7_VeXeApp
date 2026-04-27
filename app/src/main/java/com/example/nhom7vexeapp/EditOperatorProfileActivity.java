@@ -1,5 +1,6 @@
 package com.example.nhom7vexeapp;
 
+import android.app.Dialog;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Bitmap;
@@ -12,8 +13,8 @@ import android.os.Handler;
 import android.provider.MediaStore;
 import android.util.Base64;
 import android.util.Log;
-import android.view.LayoutInflater;
 import android.view.View;
+import android.view.Window;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageView;
@@ -21,7 +22,6 @@ import android.widget.TextView;
 import android.widget.Toast;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
-import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.bumptech.glide.Glide;
@@ -79,7 +79,9 @@ public class EditOperatorProfileActivity extends AppCompatActivity {
         });
 
         findViewById(R.id.btnBack).setOnClickListener(v -> finish());
-        btnCancel.setOnClickListener(v -> finish());
+        
+        // Cập nhật nút Hủy hiển thị popup xác nhận
+        btnCancel.setOnClickListener(v -> showConfirmCancelDialog());
 
         btnSave.setOnClickListener(v -> {
             if (validateForm()) {
@@ -146,9 +148,6 @@ public class EditOperatorProfileActivity extends AppCompatActivity {
 
     private void handleSmartUpdate() {
         ApiService apiService = ApiClient.getClient().create(ApiService.class);
-        Toast.makeText(this, "Đang cập nhật...", Toast.LENGTH_SHORT).show();
-
-        // Sửa lỗi incompatible types: Map<String, String> -> Map<String, Object>
         Map<String, Object> data = new HashMap<>();
         data.put("NhaxeID", opUid);
         data.put("Tennhaxe", edtName.getText().toString().trim()); 
@@ -164,15 +163,62 @@ public class EditOperatorProfileActivity extends AppCompatActivity {
                 if (response.isSuccessful()) {
                     showSuccessPopup();
                 } else {
-                    Log.e(TAG, "Update failed: " + response.code());
-                    Toast.makeText(EditOperatorProfileActivity.this, "Lỗi cập nhật: " + response.code(), Toast.LENGTH_SHORT).show();
+                    Toast.makeText(EditOperatorProfileActivity.this, "Lỗi cập nhật!", Toast.LENGTH_SHORT).show();
                 }
             }
             @Override public void onFailure(Call<Void> call, Throwable t) {
-                Log.e(TAG, "Network Error: " + t.getMessage());
                 Toast.makeText(EditOperatorProfileActivity.this, "Lỗi kết nối!", Toast.LENGTH_SHORT).show();
             }
         });
+    }
+
+    private void showConfirmCancelDialog() {
+        final Dialog dialog = new Dialog(this);
+        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
+        dialog.setContentView(R.layout.dialog_confirm_cancel);
+        if (dialog.getWindow() != null) {
+            dialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+        }
+
+        TextView tvMsg = dialog.findViewById(R.id.tvDialogMessage);
+        Button btnNo = dialog.findViewById(R.id.btnNo);
+        Button btnYes = dialog.findViewById(R.id.btnYes);
+
+        if (tvMsg != null) {
+            tvMsg.setText("Bạn có thông tin chỉnh sửa chưa lưu,\nxác nhận hủy?");
+        }
+
+        if (btnNo != null) btnNo.setOnClickListener(v -> dialog.dismiss());
+        if (btnYes != null) btnYes.setOnClickListener(v -> {
+            dialog.dismiss();
+            finish();
+        });
+
+        dialog.show();
+    }
+
+    private void showSuccessPopup() {
+        final Dialog dialog = new Dialog(this);
+        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
+        dialog.setContentView(R.layout.dialog_success);
+        if (dialog.getWindow() != null) {
+            dialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+        }
+
+        TextView tvMsg = dialog.findViewById(R.id.tvMessage);
+        if (tvMsg != null) {
+            tvMsg.setText("Cập nhật thông tin Nhà xe\nthành công");
+        }
+
+        dialog.show();
+
+        new Handler().postDelayed(() -> {
+            if (dialog.isShowing()) {
+                dialog.dismiss();
+                setResult(RESULT_OK);
+                finish();
+            }
+        }, 2000);
     }
 
     private void setupBottomNavigation() {
@@ -190,19 +236,5 @@ public class EditOperatorProfileActivity extends AppCompatActivity {
         }
         tvErrorName.setVisibility(View.GONE);
         return true; 
-    }
-
-    private void showSuccessPopup() {
-        View dv = getLayoutInflater().inflate(R.layout.dialog_update_success, null);
-        AlertDialog dialog = new AlertDialog.Builder(this).setView(dv).create();
-        if (dialog.getWindow() != null) dialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
-        dialog.show();
-        new Handler().postDelayed(() -> { 
-            if (dialog.isShowing()) { 
-                dialog.dismiss(); 
-                setResult(RESULT_OK); 
-                finish(); 
-            } 
-        }, 1500);
     }
 }

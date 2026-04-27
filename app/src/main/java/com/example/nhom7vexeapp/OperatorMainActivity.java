@@ -5,14 +5,12 @@ import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.os.Bundle;
-import android.util.Log;
 import android.view.Gravity;
 import android.view.View;
 import android.widget.LinearLayout;
 import android.widget.TableLayout;
 import android.widget.TableRow;
 import android.widget.TextView;
-import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.nhom7vexeapp.api.ApiClient;
@@ -32,7 +30,6 @@ import retrofit2.Response;
 
 public class OperatorMainActivity extends AppCompatActivity {
 
-    private static final String TAG = "DEBUG_OP_MAIN";
     private TextView tvHeaderName, tvBannerName, tvBannerId;
     private TableLayout tlSchedule;
     private String opUid;
@@ -43,20 +40,18 @@ public class OperatorMainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        try {
-            setContentView(R.layout.activity_operator_main);
+        setContentView(R.layout.activity_operator_main);
 
-            SharedPreferences pref = getSharedPreferences("UserPrefs", MODE_PRIVATE);
-            opUid = pref.getString("op_uid", "NX00001");
+        SharedPreferences pref = getSharedPreferences("UserPrefs", MODE_PRIVATE);
+        opUid = pref.getString("op_uid", "NX00001");
 
-            apiService = ApiClient.getClient().create(ApiService.class);
+        apiService = ApiClient.getClient().create(ApiService.class);
 
-            initViews();
-            loadNhaxeInfo();
-            loadRealSchedule();
-            setupBottomNavigation();
-            setupProfileClick();
-        } catch (Exception e) { e.printStackTrace(); }
+        initViews();
+        loadNhaxeInfo();
+        loadRealSchedule();
+        setupBottomNavigation();
+        setupProfileClick();
     }
 
     private void initViews() {
@@ -155,7 +150,6 @@ public class OperatorMainActivity extends AppCompatActivity {
                         ((TextView)item.findViewById(R.id.tvScheduleTime)).setText(trip.getTime());
                         ((TextView)item.findViewById(R.id.tvScheduleRoute)).setText(trip.getRouteName().replace("Tuyến: ", ""));
 
-                        // ✅ SỬA LỖI: Chuyển sang màn hình chi tiết khi click vào chuyến xe
                         item.setOnClickListener(v -> {
                             Intent intent = new Intent(OperatorMainActivity.this, TripDetailActivity.class);
                             intent.putExtra("trip", trip);
@@ -205,9 +199,34 @@ public class OperatorMainActivity extends AppCompatActivity {
     }
 
     private void setupBottomNavigation() {
-        findViewById(R.id.nav_driver_op).setOnClickListener(v -> startActivity(new Intent(this, DriverSelectionActivity.class)));
-        findViewById(R.id.nav_trip_op).setOnClickListener(v -> startActivity(new Intent(this, TripListActivity.class)));
-        findViewById(R.id.nav_route_op).setOnClickListener(v -> startActivity(new Intent(this, QLTuyenxeActivity.class)));
-        findViewById(R.id.nav_vehicle_op).setOnClickListener(v -> startActivity(new Intent(this, PhuongTienManagementActivity.class)));
+        // TRANG CHỦ
+        View navHome = findViewById(R.id.nav_home_op_main);
+        if (navHome != null) navHome.setOnClickListener(v -> {
+            // Đã ở trang chủ rồi không cần chuyển
+        });
+
+        // TÀI XẾ
+        View navDriver = findViewById(R.id.nav_driver_op);
+        if (navDriver != null) navDriver.setOnClickListener(v -> {
+            startActivity(new Intent(this, DriverSelectionActivity.class));
+        });
+
+        // CHUYẾN XE
+        View navTrip = findViewById(R.id.nav_trip_op);
+        if (navTrip != null) navTrip.setOnClickListener(v -> {
+            startActivity(new Intent(this, TripListActivity.class));
+        });
+
+        // TUYẾN XE
+        View navRoute = findViewById(R.id.nav_route_op);
+        if (navRoute != null) navRoute.setOnClickListener(v -> {
+            startActivity(new Intent(this, QLTuyenxeActivity.class));
+        });
+
+        // PHƯƠNG TIỆN
+        View navVehicle = findViewById(R.id.nav_vehicle_op);
+        if (navVehicle != null) navVehicle.setOnClickListener(v -> {
+            startActivity(new Intent(this, QLPhuongTienActivity.class));
+        });
     }
 }

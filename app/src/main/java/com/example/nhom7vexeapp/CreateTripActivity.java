@@ -2,9 +2,13 @@ package com.example.nhom7vexeapp;
 
 import android.app.DatePickerDialog;
 import android.app.Dialog;
+import android.content.Intent;
+import android.graphics.Color;
+import android.graphics.drawable.ColorDrawable;
 import android.os.Bundle;
-import android.util.Log;
+import android.os.Handler;
 import android.view.View;
+import android.view.Window;
 import android.widget.*;
 
 import androidx.appcompat.app.AppCompatActivity;
@@ -163,7 +167,7 @@ public class CreateTripActivity extends AppCompatActivity {
             @Override public void onNothingSelected(AdapterView<?> p) {}
         });
         btnSave.setOnClickListener(v -> validateAndSave());
-        btnCancel.setOnClickListener(v -> finish());
+        btnCancel.setOnClickListener(v -> showConfirmCancelDialog());
     }
 
     private void validateAndSave() {
@@ -235,7 +239,7 @@ public class CreateTripActivity extends AppCompatActivity {
                     if (editingTrip == null) {
                         createSeatsForNewTrip(tripId);
                     } else {
-                        showSuccessDialog();
+                        showSuccessDialog(true);
                     }
                 } else {
                     Toast.makeText(CreateTripActivity.this, "Lỗi server: " + response.code(), Toast.LENGTH_SHORT).show();
@@ -271,7 +275,7 @@ public class CreateTripActivity extends AppCompatActivity {
                 @Override public void onFailure(Call<Void> call, Throwable t) {}
             });
         }
-        showSuccessDialog();
+        showSuccessDialog(false);
     }
 
     private String calculateEndTime(String startTime) {
@@ -353,13 +357,75 @@ public class CreateTripActivity extends AppCompatActivity {
         });
     }
 
-    private void showSuccessDialog() {
-        Dialog dialog = new Dialog(this);
-        dialog.setContentView(R.layout.dialog_delete_error);
-        ((TextView)dialog.findViewById(R.id.tvDialogMessage)).setText("Lưu thông tin chuyến xe thành công!");
-        Button btnOk = dialog.findViewById(R.id.btnOk);
-        btnOk.setText("OK");
-        btnOk.setOnClickListener(v -> { dialog.dismiss(); finish(); });
+    private void showSuccessDialog(boolean isUpdate) {
+        final Dialog dialog = new Dialog(this);
+        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
+        dialog.setContentView(R.layout.dialog_success);
+        if (dialog.getWindow() != null) {
+            dialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+        }
+
+        TextView tvMsg = dialog.findViewById(R.id.tvMessage);
+        if (tvMsg != null) {
+            tvMsg.setText(isUpdate ? "Cập nhật chuyến xe thành công" : "Tạo chuyến xe thành công");
+        }
+
+        dialog.setCancelable(true);
+        dialog.setCanceledOnTouchOutside(true);
+        
+        // Logic điều hướng khi đóng popup
+        dialog.setOnDismissListener(d -> {
+            if (isUpdate) {
+                // Nếu là Cập nhật -> Quay về màn hình Chi tiết chuyến xe (màn hình trước đó)
+                setResult(RESULT_OK);
+                finish();
+            } else {
+                // Nếu là Tạo mới -> Quay về màn hình Danh sách chuyến xe
+                Intent intent = new Intent(CreateTripActivity.this, TripListActivity.class);
+                intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+                startActivity(intent);
+                finish();
+            }
+        });
+
+        // Ấn vào bất kỳ đâu trên popup cũng sẽ thực hiện đóng và chuyển màn hình
+        View dialogView = dialog.findViewById(android.R.id.content);
+        if (dialogView != null) {
+            dialogView.setOnClickListener(v -> dialog.dismiss());
+        }
+
+        dialog.show();
+
+        // Tự động đóng sau 2.5 giây
+        new Handler().postDelayed(() -> {
+            if (dialog.isShowing()) {
+                dialog.dismiss();
+            }
+        }, 2500);
+    }
+
+    private void showConfirmCancelDialog() {
+        final Dialog dialog = new Dialog(this);
+        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
+        dialog.setContentView(R.layout.dialog_confirm_cancel);
+        if (dialog.getWindow() != null) {
+            dialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+        }
+
+        TextView tvMsg = dialog.findViewById(R.id.tvDialogMessage);
+        Button btnNo = dialog.findViewById(R.id.btnNo);
+        Button btnYes = dialog.findViewById(R.id.btnYes);
+
+        if (tvMsg != null) {
+            tvMsg.setText("Bạn có thông tin chỉnh sửa chưa lưu,\nxác nhận hủy?");
+        }
+
+        if (btnNo != null) btnNo.setOnClickListener(v -> dialog.dismiss());
+        if (btnYes != null) btnYes.setOnClickListener(v -> {
+            dialog.dismiss();
+            finish();
+        });
+
         dialog.show();
     }
 }

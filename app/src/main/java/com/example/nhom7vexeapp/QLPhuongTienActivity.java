@@ -5,8 +5,10 @@ import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.Toast;
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -26,6 +28,7 @@ public class QLPhuongTienActivity extends AppCompatActivity {
     private List<VehicleManaged> vehicleList = new ArrayList<>();
     private ProgressBar progressBar;
     private VehicleViewModel viewModel;
+    private String nhaXeId;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -39,11 +42,7 @@ public class QLPhuongTienActivity extends AppCompatActivity {
         setupObservers();
 
         SharedPreferences pref = getSharedPreferences("UserPrefs", MODE_PRIVATE);
-        String nhaXeId = pref.getString("op_uid", ""); 
-
-        if (nhaXeId.isEmpty() || nhaXeId.length() < 7) {
-            nhaXeId = "NX00001"; 
-        }
+        nhaXeId = pref.getString("op_uid", "NX00001"); 
 
         viewModel.fetchVehicles(nhaXeId);
     }
@@ -51,14 +50,23 @@ public class QLPhuongTienActivity extends AppCompatActivity {
     private void initViews() {
         rvVehicles = findViewById(R.id.rvVehicles);
         progressBar = findViewById(R.id.progressBarVehicles);
+        
         ImageView btnBack = findViewById(R.id.btnBack);
         if (btnBack != null) btnBack.setOnClickListener(v -> finish());
+
+        // Bắt sự kiện cho nút Thêm xe
+        LinearLayout btnAddVehicle = findViewById(R.id.btnAddVehicle);
+        if (btnAddVehicle != null) {
+            btnAddVehicle.setOnClickListener(v -> {
+                Intent intent = new Intent(QLPhuongTienActivity.this, CreateVehicleActivity.class);
+                startActivityForResult(intent, 1001);
+            });
+        }
     }
 
     private void setupRecyclerView() {
         if (rvVehicles != null) {
             rvVehicles.setLayoutManager(new LinearLayoutManager(this));
-            // ĐỒNG BỘ LẠI LISTENER: Sử dụng onShowDetail khớp với Adapter
             adapter = new VehicleManagedAdapter(vehicleList, this, new VehicleManagedAdapter.OnVehicleActionListener() {
                 @Override
                 public void onDelete(VehicleManaged vehicle, int position) {
@@ -67,7 +75,6 @@ public class QLPhuongTienActivity extends AppCompatActivity {
 
                 @Override
                 public void onShowDetail(VehicleManaged vehicle) {
-                    // KÍCH HOẠT MỞ MÀN HÌNH CHI TIẾT
                     Intent intent = new Intent(QLPhuongTienActivity.this, VehicleDetailActivity.class);
                     intent.putExtra("vehicle_managed_data", vehicle);
                     startActivity(intent);
@@ -96,9 +103,17 @@ public class QLPhuongTienActivity extends AppCompatActivity {
 
         viewModel.isActionSuccess.observe(this, success -> {
             if (success) {
-                Toast.makeText(this, "Đã cập nhật Database thành công!", Toast.LENGTH_SHORT).show();
-                recreate();
+                Toast.makeText(this, "Thao tác thành công!", Toast.LENGTH_SHORT).show();
+                viewModel.fetchVehicles(nhaXeId);
             }
         });
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == 1001 && resultCode == RESULT_OK) {
+            viewModel.fetchVehicles(nhaXeId);
+        }
     }
 }

@@ -1,15 +1,19 @@
 package com.example.nhom7vexeapp;
 
 import android.app.DatePickerDialog;
+import android.app.Dialog;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Color;
+import android.graphics.drawable.ColorDrawable;
 import android.net.Uri;
 import android.os.Bundle;
 import android.provider.MediaStore;
 import android.util.Base64;
 import android.view.View;
+import android.view.Window;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.LinearLayout;
@@ -134,12 +138,19 @@ public class CustomerRegisterActivity extends AppCompatActivity {
             return;
         }
 
+        btnFinish.setEnabled(false);
+
         apiService.getUsers("Get").enqueue(new Callback<List<UserModel>>() {
             @Override
             public void onResponse(Call<List<UserModel>> call, Response<List<UserModel>> res) {
                 int maxNum = 0;
+                boolean phoneExists = false;
                 if (res.isSuccessful() && res.body() != null) {
                     for (UserModel u : res.body()) {
+                        if (phone.equals(u.getSoDienThoai()) || phone.equals(u.getTenDangNhap())) {
+                            phoneExists = true;
+                            break;
+                        }
                         try {
                             String id = u.getUserID();
                             if (id != null && id.startsWith("US")) {
@@ -149,6 +160,12 @@ public class CustomerRegisterActivity extends AppCompatActivity {
                             }
                         } catch (Exception e) {}
                     }
+                }
+                
+                if (phoneExists) {
+                    Toast.makeText(CustomerRegisterActivity.this, "Số điện thoại đã được đăng ký!", Toast.LENGTH_LONG).show();
+                    btnFinish.setEnabled(true);
+                    return;
                 }
                 
                 String nextUsId = String.format("US%05d", maxNum + 1);
@@ -168,15 +185,25 @@ public class CustomerRegisterActivity extends AppCompatActivity {
         prof.put("Hovaten", name);
         prof.put("Ngaysinh", dob);
         prof.put("AnhDaiDienURL", selectedImageBase64);
-        prof.put("Email", phone + "@gmail.com");
+        prof.put("Email", "user" + phone + "@nhom7app.com");
 
-        // FIX LỖI: Sử dụng phương thức createKhachHangProfile thay vì createKhachHangProfileRaw đã bị xóa
         apiService.createKhachHangProfile(prof).enqueue(new Callback<Void>() {
             @Override
             public void onResponse(Call<Void> call, Response<Void> response) {
-                createAuthAccount(usId, khId, phone, name);
+                if (response.isSuccessful()) {
+                    createAuthAccount(usId, khId, phone, name);
+                } else {
+                    btnFinish.setEnabled(true);
+                    try {
+                        String error = response.errorBody().string();
+                        Toast.makeText(CustomerRegisterActivity.this, "Lỗi tạo hồ sơ: " + error, Toast.LENGTH_LONG).show();
+                    } catch (Exception e) {
+                        Toast.makeText(CustomerRegisterActivity.this, "Lỗi hồ sơ (Code: " + response.code() + ")", Toast.LENGTH_SHORT).show();
+                    }
+                }
             }
             @Override public void onFailure(Call<Void> call, Throwable t) {
+                btnFinish.setEnabled(true);
                 Toast.makeText(CustomerRegisterActivity.this, "Lỗi mạng bước 1", Toast.LENGTH_SHORT).show();
             }
         });
@@ -194,16 +221,45 @@ public class CustomerRegisterActivity extends AppCompatActivity {
         apiService.registerAuth(auth).enqueue(new Callback<Void>() {
             @Override
             public void onResponse(Call<Void> call, Response<Void> response) {
+                btnFinish.setEnabled(true);
                 if (response.isSuccessful()) {
-                    Toast.makeText(CustomerRegisterActivity.this, "Đăng ký thành công!", Toast.LENGTH_SHORT).show();
-                    saveLoginInfo(usId, khId, name);
-                    finish();
+                    showSuccessPopup(usId, khId, name);
                 } else {
-                    Toast.makeText(CustomerRegisterActivity.this, "Lỗi đăng ký!", Toast.LENGTH_LONG).show();
+                    try {
+                        String error = response.errorBody().string();
+                        Toast.makeText(CustomerRegisterActivity.this, "Lỗi tài khoản: " + error, Toast.LENGTH_LONG).show();
+                    } catch (Exception e) {
+                        Toast.makeText(CustomerRegisterActivity.this, "Lỗi đăng ký!", Toast.LENGTH_LONG).show();
+                    }
                 }
             }
-            @Override public void onFailure(Call<Void> call, Throwable t) {}
+            @Override public void onFailure(Call<Void> call, Throwable t) {
+                btnFinish.setEnabled(true);
+                Toast.makeText(CustomerRegisterActivity.this, "Lỗi mạng bước 2", Toast.LENGTH_SHORT).show();
+            }
         });
+    }
+
+    private void showSuccessPopup(String usId, String khId, String name) {
+        final Dialog dialog = new Dialog(this);
+        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
+        dialog.setContentView(R.layout.dialog_success);
+        if (dialog.getWindow() != null) {
+            dialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+        }
+
+        TextView tvMsg = dialog.findViewById(R.id.tvMessage);
+        if (tvMsg != null) {
+            tvMsg.setText("Tạo tài khoản khách hàng\nthành công");
+        }
+
+        dialog.show();
+
+        new android.os.Handler().postDelayed(() -> {
+            dialog.dismiss();
+            saveLoginInfo(usId, khId, name);
+            finish();
+        }, 2000);
     }
 
     private void showDatePicker() {

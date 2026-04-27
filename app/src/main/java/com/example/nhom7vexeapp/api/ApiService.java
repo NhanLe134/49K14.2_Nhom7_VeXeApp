@@ -67,6 +67,9 @@ public interface ApiService {
     @GET("api/xe/")
     Call<List<VehicleManaged>> getVehicles();
 
+    @POST("api/xe/")
+    Call<Void> createVehicle(@Body Map<String, Object> data);
+
     @PUT("api/xe/{id}/")
     Call<VehicleManaged> updateVehicle(@Path("id") String id, @Body VehicleManaged vehicle);
 

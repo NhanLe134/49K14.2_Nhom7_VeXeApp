@@ -40,6 +40,11 @@ public class TripRouteActivity extends AppCompatActivity {
     private Map<String, String> customerNames = new HashMap<>();
     private List<Seat> allSeatsOfTrip = new ArrayList<>();
 
+    // Tọa độ các thành phố chính
+    private final GeoPoint HUE = new GeoPoint(16.4637, 107.5909);
+    private final GeoPoint DANANG = new GeoPoint(16.0544, 108.2022);
+    private final GeoPoint HOIAN = new GeoPoint(15.8801, 108.3273);
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -128,7 +133,6 @@ public class TripRouteActivity extends AppCompatActivity {
             @Override
             public void onResponse(Call<List<Map<String, Object>>> call, Response<List<Map<String, Object>>> response) {
                 if (response.isSuccessful() && response.body() != null) {
-                    // ✅ CHỈ LẤY CÁC VÉ THUỘC ĐÚNG CHUYẾN XE NÀY
                     tickets.clear();
                     for (Map<String, Object> v : response.body()) {
                         String ticketTripId = findVal(v, "ChuyenXe", "chuyenxe", "ChuyenXeID");
@@ -154,32 +158,58 @@ public class TripRouteActivity extends AppCompatActivity {
         };
         map.getOverlays().add(new MapEventsOverlay(mReceive));
 
-        GeoPoint startPoint = new GeoPoint(16.0544, 108.2022); 
-        GeoPoint endPoint = new GeoPoint(16.4637, 107.5909);   
+        // Xác định điểm đi và điểm đến dựa trên tên tuyến
+        GeoPoint startPoint = DANANG; 
+        GeoPoint endPoint = HUE;
+        String routeName = (currentTrip.getRouteName() != null ? currentTrip.getRouteName() : "").toLowerCase();
+        
+        if (routeName.contains("huế") && (routeName.contains("đà nẵng") || routeName.contains("đn"))) {
+            if (routeName.indexOf("huế") < (routeName.contains("đà nẵng") ? routeName.indexOf("đà nẵng") : routeName.indexOf("đn"))) {
+                startPoint = HUE; endPoint = DANANG;
+            } else {
+                startPoint = DANANG; endPoint = HUE;
+            }
+        } else if ((routeName.contains("hội an") || routeName.contains("ha")) && (routeName.contains("đà nẵng") || routeName.contains("đn"))) {
+            if ((routeName.contains("đà nẵng") ? routeName.indexOf("đà nẵng") : routeName.indexOf("đn")) < (routeName.contains("hội an") ? routeName.indexOf("hội an") : routeName.indexOf("ha"))) {
+                startPoint = DANANG; endPoint = HOIAN;
+            } else {
+                startPoint = HOIAN; endPoint = DANANG;
+            }
+        }
 
         Polyline line = new Polyline();
         line.setColor(Color.parseColor("#03A9F4")); 
-        line.setWidth(10f);
-        line.addPoint(startPoint);
+        line.setWidth(8f);
 
+        GeoPoint focusPoint = isShowingPickup ? startPoint : endPoint;
+        List<GeoPoint> routePath = new ArrayList<>();
+
+        if (isShowingPickup) {
+            routePath.add(startPoint);
+        } else {
+            routePath.add(startPoint);
+        }
+
+        // Hiển thị nhiều chấm xanh dương cho hành khách và nối đường đi
         for (int i = 0; i < tickets.size(); i++) {
             Map<String, Object> v = tickets.get(i);
             
-            double ratio = (double)(i + 1) / (tickets.size() + 1);
-            double lat = startPoint.getLatitude() + (endPoint.getLatitude() - startPoint.getLatitude()) * ratio;
-            double lon = startPoint.getLongitude() + (endPoint.getLongitude() - startPoint.getLongitude()) * ratio;
+            // Random vị trí quanh khu vực điểm đón/trả để tạo hiệu ứng "nhiều điểm"
+            double lat = focusPoint.getLatitude() + (Math.random() - 0.5) * 0.012;
+            double lon = focusPoint.getLongitude() + (Math.random() - 0.5) * 0.012;
+            GeoPoint point = new GeoPoint(lat, lon);
             
-            GeoPoint point = new GeoPoint(lat + (Math.random()-0.5)*0.008, lon + (Math.random()-0.5)*0.008);
-            line.addPoint(point);
+            routePath.add(point);
 
             Marker m = new Marker(map);
             m.setPosition(point);
             
+            // Chấm màu xanh dương (Blue) theo yêu cầu mới
             GradientDrawable circle = new GradientDrawable();
             circle.setShape(GradientDrawable.OVAL);
-            circle.setColor(Color.WHITE);
-            circle.setStroke(5, Color.parseColor("#03A9F4"));
-            circle.setSize(20, 20);
+            circle.setColor(Color.parseColor("#03A9F4")); 
+            circle.setStroke(3, Color.WHITE);
+            circle.setSize(24, 24);
             
             m.setIcon(circle);
             m.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER);
@@ -192,29 +222,28 @@ public class TripRouteActivity extends AppCompatActivity {
             updatePassengerItem(v, name);
         }
 
-        line.addPoint(endPoint);
+        routePath.add(endPoint);
+        line.setPoints(routePath);
         map.getOverlays().add(line);
-        addPointMarker(startPoint, "Điểm đi");
-        addPointMarker(endPoint, "Điểm đến");
 
-        if (isShowingPickup) {
-            map.getController().setZoom(15.0);
-            map.getController().animateTo(startPoint);
-        } else {
-            map.getController().setZoom(15.0);
-            map.getController().animateTo(endPoint);
-        }
+        // Tất cả marker chính cũng đổi thành màu xanh dương cho đồng bộ
+        addPointMarker(startPoint, "Điểm đi", Color.parseColor("#00B0FF"));
+        addPointMarker(endPoint, "Điểm đến", Color.parseColor("#00B0FF"));
+
+        map.getController().setZoom(14.5);
+        map.getController().animateTo(focusPoint);
         map.invalidate();
     }
 
-    private void addPointMarker(GeoPoint point, String title) {
+    private void addPointMarker(GeoPoint point, String title, int color) {
         Marker m = new Marker(map);
         m.setPosition(point);
         m.setTitle(title);
         GradientDrawable circle = new GradientDrawable();
         circle.setShape(GradientDrawable.OVAL);
-        circle.setColor(Color.parseColor("#03A9F4"));
-        circle.setSize(35, 35);
+        circle.setColor(color);
+        circle.setStroke(4, Color.WHITE);
+        circle.setSize(40, 40);
         m.setIcon(circle);
         m.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER);
         map.getOverlays().add(m);
