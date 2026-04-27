@@ -5,12 +5,12 @@
     android:layout_height="match_parent"
     android:background="#F8F9FA">
 
-    <!-- HEADER -->
+    <!-- HEADER - Màu xanh biển đậm hơn -->
     <LinearLayout
         android:id="@+id/header"
         android:layout_width="match_parent"
         android:layout_height="60dp"
-        android:background="#13B5F6"
+        android:background="#0091D5"
         android:gravity="center_vertical"
         android:orientation="horizontal"
         android:paddingHorizontal="15dp"
@@ -36,7 +36,7 @@
             android:textStyle="bold" />
     </LinearLayout>
 
-    <ScrollView
+    <androidx.core.widget.NestedScrollView
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:clipToPadding="false"
@@ -117,6 +117,7 @@
                 android:layout_marginTop="8dp"
                 android:orientation="horizontal">
 
+                <!-- Khôi phục nút Ngày: Icon lịch, Nền xám nhạt -->
                 <LinearLayout
                     android:id="@+id/btnToday"
                     android:layout_width="0dp"
@@ -125,10 +126,12 @@
                     android:layout_weight="1"
                     android:background="@drawable/bg_button_rounded"
                     android:gravity="center"
-                    android:orientation="horizontal">
+                    android:orientation="horizontal"
+                    android:clickable="true"
+                    android:focusable="true">
                     <ImageView
-                        android:layout_width="16dp"
-                        android:layout_height="16dp"
+                        android:layout_width="18dp"
+                        android:layout_height="18dp"
                         android:src="@drawable/ic_calendar_custom"
                         app:tint="#757575" />
                     <TextView
@@ -141,6 +144,7 @@
                         android:textSize="12sp" />
                 </LinearLayout>
 
+                <!-- Khôi phục nút Bộ lọc: Icon filter, Nền xám nhạt -->
                 <LinearLayout
                     android:id="@+id/btnFilter"
                     android:layout_width="0dp"
@@ -149,10 +153,12 @@
                     android:layout_weight="1"
                     android:background="@drawable/bg_button_rounded"
                     android:gravity="center"
-                    android:orientation="horizontal">
+                    android:orientation="horizontal"
+                    android:clickable="true"
+                    android:focusable="true">
                     <ImageView
-                        android:layout_width="16dp"
-                        android:layout_height="16dp"
+                        android:layout_width="18dp"
+                        android:layout_height="18dp"
                         android:src="@drawable/ic_filter_list"
                         app:tint="#757575" />
                     <TextView
@@ -165,33 +171,48 @@
                         android:textSize="12sp" />
                 </LinearLayout>
 
-                <TextView
+                <!-- Nút Tìm kiếm: Xanh lơ nhẹ, Icon kính lúp trắng -->
+                <LinearLayout
                     android:id="@+id/btnSearch"
                     android:layout_width="0dp"
                     android:layout_height="45dp"
                     android:layout_weight="1"
-                    android:background="@drawable/bg_btn_solid_blue"
+                    android:background="@drawable/bg_btn_search_light"
                     android:gravity="center"
-                    android:text="🔍 Tìm kiếm"
-                    android:textColor="@color/white"
-                    android:textStyle="bold"
-                    android:textSize="12sp" />
+                    android:orientation="horizontal"
+                    android:clickable="true"
+                    android:focusable="true">
+                    <ImageView
+                        android:layout_width="18dp"
+                        android:layout_height="18dp"
+                        android:src="@drawable/search"
+                        app:tint="@color/white" />
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="6dp"
+                        android:text="Tìm kiếm"
+                        android:textColor="@color/white"
+                        android:textStyle="bold"
+                        android:textSize="12sp" />
+                </LinearLayout>
             </LinearLayout>
 
-            <!-- FILTER SECTION (Expandable Card) -->
+            <!-- FILTER SECTION -->
             <androidx.cardview.widget.CardView
                 android:id="@+id/layoutFilter"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="10dp"
+                android:layout_marginTop="15dp"
                 android:visibility="gone"
                 app:cardCornerRadius="12dp"
-                app:cardElevation="2dp">
+                app:cardElevation="8dp"
+                app:cardUseCompatPadding="true">
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:padding="15dp"
+                    android:padding="20dp"
                     android:orientation="vertical">
 
                     <TextView
@@ -199,20 +220,20 @@
                         android:layout_height="wrap_content"
                         android:text="Tài xế"
                         android:textColor="#616161"
-                        android:textSize="12sp"
+                        android:textSize="13sp"
                         android:textStyle="bold" />
 
                     <Spinner
                         android:id="@+id/spinnerDriver"
                         android:layout_width="match_parent"
-                        android:layout_height="45dp"
-                        android:layout_marginTop="5dp"
+                        android:layout_height="48dp"
+                        android:layout_marginTop="8dp"
                         android:background="@drawable/bg_input_gray_rounded" />
 
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="12dp"
+                        android:layout_marginTop="16dp"
                         android:orientation="horizontal">
 
                         <LinearLayout
@@ -226,14 +247,14 @@
                                 android:layout_height="wrap_content"
                                 android:text="Từ ngày"
                                 android:textColor="#616161"
-                                android:textSize="12sp"
+                                android:textSize="13sp"
                                 android:textStyle="bold" />
 
                             <TextView
                                 android:id="@+id/tvFromDate"
                                 android:layout_width="match_parent"
-                                android:layout_height="45dp"
-                                android:layout_marginTop="5dp"
+                                android:layout_height="48dp"
+                                android:layout_marginTop="8dp"
                                 android:background="@drawable/bg_input_gray_rounded"
                                 android:gravity="center_vertical"
                                 android:paddingHorizontal="12dp"
@@ -242,7 +263,7 @@
                         </LinearLayout>
 
                         <View
-                            android:layout_width="12dp"
+                            android:layout_width="15dp"
                             android:layout_height="0dp" />
 
                         <LinearLayout
@@ -256,14 +277,14 @@
                                 android:layout_height="wrap_content"
                                 android:text="Đến ngày"
                                 android:textColor="#616161"
-                                android:textSize="12sp"
+                                android:textSize="13sp"
                                 android:textStyle="bold" />
 
                             <TextView
                                 android:id="@+id/tvToDate"
                                 android:layout_width="match_parent"
-                                android:layout_height="45dp"
-                                android:layout_marginTop="5dp"
+                                android:layout_height="48dp"
+                                android:layout_marginTop="8dp"
                                 android:background="@drawable/bg_input_gray_rounded"
                                 android:gravity="center_vertical"
                                 android:paddingHorizontal="12dp"
@@ -275,17 +296,17 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="12dp"
+                        android:layout_marginTop="16dp"
                         android:text="Trạng thái"
                         android:textColor="#616161"
-                        android:textSize="12sp"
+                        android:textSize="13sp"
                         android:textStyle="bold" />
 
                     <Spinner
                         android:id="@+id/spinnerStatus"
                         android:layout_width="match_parent"
-                        android:layout_height="45dp"
-                        android:layout_marginTop="5dp"
+                        android:layout_height="48dp"
+                        android:layout_marginTop="8dp"
                         android:background="@drawable/bg_input_gray_rounded" />
                 </LinearLayout>
             </androidx.cardview.widget.CardView>
@@ -362,6 +383,6 @@
                 android:visibility="gone" />
 
         </LinearLayout>
-    </ScrollView>
+    </androidx.core.widget.NestedScrollView>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

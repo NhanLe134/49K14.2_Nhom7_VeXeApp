@@ -5,7 +5,7 @@
     android:layout_height="match_parent"
     android:background="#FFFFFF">
 
-    <!-- HEADER -->
+    <!-- HEADER - Đã bỏ icon người bên phải -->
     <LinearLayout
         android:id="@+id/header"
         android:layout_width="match_parent"
@@ -33,11 +33,6 @@
             android:textSize="18sp"
             android:textStyle="bold" />
 
-        <ImageView
-            android:layout_width="32dp"
-            android:layout_height="32dp"
-            android:src="@drawable/account_circle"
-            app:tint="@color/white" />
     </LinearLayout>
 
     <LinearLayout
