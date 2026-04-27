@@ -6,6 +6,7 @@ import android.graphics.drawable.ColorDrawable;
 import android.os.Bundle;
 import android.os.Handler;
 import android.text.TextUtils;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.Button;
@@ -40,18 +41,19 @@ import retrofit2.Response;
 
 public class QLNhaxeActivity extends AppCompatActivity {
 
+    private static final String TAG = "QLNhaxeActivity";
     private LinearLayout layoutViewMode, layoutEditMode;
     private TextView txtToolbarTitle, txtFileName;
     private TextView tvViewBusName, tvViewBusNameHeader, tvViewRepName, tvViewAddress, tvViewPhone, tvViewEmail;
-    private EditText edtBusName, edtRepName, edtAddress, edtPhone;
+    private EditText edtBusName, edtRepName, edtAddress, edtPhone, edtEmail;
     private TextView tvErrorBusName, tvErrorRepName, tvErrorAddress, tvErrorPhone;
     private Button btnEdit, btnSave, btnCancel;
     private TextView btnChooseFile;
     private ImageView btnBack;
-    private ImageView imgLogo, imgViewBanner, imgEditPreview;
+    private ImageView imgViewBanner, imgEditPreview;
 
     private boolean isEditing = false;
-    private String opUid, opEmail = "";
+    private String opUid;
     private String selectedImageBase64 = "";
     private ApiService apiService;
 
@@ -60,9 +62,14 @@ public class QLNhaxeActivity extends AppCompatActivity {
                 if (result.getResultCode() == RESULT_OK && result.getData() != null) {
                     Uri uri = result.getData().getData();
                     if (uri != null) {
-                        imgEditPreview.setImageURI(uri);
-                        selectedImageBase64 = encodeImageToBase64(uri);
-                        txtFileName.setText("Đã chọn ảnh mới");
+                        try {
+                            Bitmap bitmap = MediaStore.Images.Media.getBitmap(getContentResolver(), uri);
+                            imgEditPreview.setImageBitmap(bitmap);
+                            selectedImageBase64 = encodeImageToBase64(uri);
+                            txtFileName.setText("Đã chọn ảnh mới");
+                        } catch (Exception e) {
+                            Log.e(TAG, "Error picking image", e);
+                        }
                     }
                 }
             });
@@ -101,6 +108,7 @@ public class QLNhaxeActivity extends AppCompatActivity {
         edtRepName = findViewById(R.id.edtRepName);
         edtAddress = findViewById(R.id.edtAddress);
         edtPhone = findViewById(R.id.edtPhone);
+        edtEmail = findViewById(R.id.edtEmail);
 
         tvErrorBusName = findViewById(R.id.tvErrorBusName);
         tvErrorRepName = findViewById(R.id.tvErrorRepName);
@@ -133,304 +141,159 @@ public class QLNhaxeActivity extends AppCompatActivity {
     }
 
     private void setupBottomNavigation() {
-        // Tab Trang chủ
-        View navHome = findViewById(R.id.nav_home_op_main);
-        if (navHome != null) {
-            navHome.setOnClickListener(v -> {
-                Intent intent = new Intent(this, OperatorMainActivity.class);
-                intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
-                startActivity(intent);
-            });
-        }
-
-        // Tab Tài xế (Hiện tại)
-        View navDriver = findViewById(R.id.nav_driver_op);
-        if (navDriver != null) {
-            navDriver.setOnClickListener(v -> {
-                // Đang ở trang này
-            });
-        }
-
-        // Tab Phương tiện
-        View navVehicle = findViewById(R.id.nav_vehicle_op);
-        if (navVehicle != null) {
-            navVehicle.setOnClickListener(v -> {
-                startActivity(new Intent(this, PhuongTienManagementActivity.class));
-            });
-        }
-
-        // Tab Chuyến xe
-        View navTrip = findViewById(R.id.nav_trip_op);
-        if (navTrip != null) {
-            navTrip.setOnClickListener(v -> {
-                startActivity(new Intent(this, TripListActivity.class));
-            });
-        }
-
-        // Tab Tuyến xe
-        View navRoute = findViewById(R.id.nav_route_op);
-        if (navRoute != null) {
-            navRoute.setOnClickListener(v -> {
-                startActivity(new Intent(this, QLTuyenxeActivity.class));
-            });
-        }
+        View home = findViewById(R.id.nav_home_op_main);
+        if (home != null) home.setOnClickListener(v -> {
+            startActivity(new Intent(this, OperatorMainActivity.class));
+            finish();
+        });
     }
 
     private void loadDataFromApi() {
-        if (opUid == null || opUid.isEmpty()) {
-            Toast.makeText(this, "Không tìm thấy ID nhà xe!", Toast.LENGTH_SHORT).show();
-            return;
-        }
+        if (opUid == null || opUid.isEmpty()) return;
 
         apiService.getNhaXeDetail(opUid).enqueue(new Callback<NhaXe>() {
             @Override
             public void onResponse(Call<NhaXe> call, Response<NhaXe> response) {
                 if (response.isSuccessful() && response.body() != null) {
-                    NhaXe nhaXe = response.body();
-                    updateUI(nhaXe);
-                } else {
-                    Toast.makeText(QLNhaxeActivity.this, "Lỗi tải dữ liệu: " + response.code(), Toast.LENGTH_SHORT).show();
+                    updateUI(response.body());
                 }
             }
-
-            @Override
-            public void onFailure(Call<NhaXe> call, Throwable t) {
-                Toast.makeText(QLNhaxeActivity.this, "Lỗi kết nối: " + t.getMessage(), Toast.LENGTH_SHORT).show();
+            @Override public void onFailure(Call<NhaXe> call, Throwable t) {
+                Log.e(TAG, "Load API Failure", t);
             }
         });
     }
 
     private void updateUI(NhaXe nhaXe) {
-        String name = nhaXe.getBusName() != null ? nhaXe.getBusName() : "Chưa cập nhật";
-        String rep = nhaXe.getRepresentative() != null ? nhaXe.getRepresentative() : "Chưa cập nhật";
-        String address = nhaXe.getAddress() != null ? nhaXe.getAddress() : "Chưa cập nhật";
-        String phone = nhaXe.getPhone() != null ? nhaXe.getPhone() : "Chưa cập nhật";
-        String email = nhaXe.getEmail() != null ? nhaXe.getEmail() : "Chưa cập nhật";
-        opEmail = email;
+        String name = nhaXe.getBusName() != null ? nhaXe.getBusName() : "";
+        String rep = nhaXe.getRepresentative() != null ? nhaXe.getRepresentative() : "";
+        String addr = nhaXe.getAddress() != null ? nhaXe.getAddress() : "";
+        String phone = nhaXe.getPhone() != null ? nhaXe.getPhone() : "";
+        String email = nhaXe.getEmail() != null ? nhaXe.getEmail() : "";
 
-        if (tvViewBusName != null) tvViewBusName.setText(name);
-        if (tvViewBusNameHeader != null) tvViewBusNameHeader.setText(name);
-        if (tvViewRepName != null) tvViewRepName.setText(rep);
-        if (tvViewAddress != null) tvViewAddress.setText(address);
-        if (tvViewPhone != null) tvViewPhone.setText(phone);
-        if (tvViewEmail != null) tvViewEmail.setText(email);
+        tvViewBusName.setText(name);
+        tvViewBusNameHeader.setText(name);
+        tvViewRepName.setText(rep);
+        tvViewAddress.setText(addr);
+        tvViewPhone.setText(phone);
+        tvViewEmail.setText(email);
 
-        if (edtBusName != null) edtBusName.setText(name);
-        if (edtRepName != null) edtRepName.setText(rep);
-        if (edtAddress != null) edtAddress.setText(address);
-        if (edtPhone != null) edtPhone.setText(phone);
+        edtBusName.setText(name);
+        edtRepName.setText(rep);
+        edtAddress.setText(addr);
+        edtPhone.setText(phone);
+        if (edtEmail != null) edtEmail.setText(email);
 
-        if (imgViewBanner != null && nhaXe.getBannerUrl() != null && !nhaXe.getBannerUrl().isEmpty()) {
+        if (nhaXe.getBannerUrl() != null && !nhaXe.getBannerUrl().isEmpty()) {
             selectedImageBase64 = nhaXe.getBannerUrl();
-            Glide.with(this)
-                .load(nhaXe.getBannerUrl())
-                .placeholder(R.drawable.banner_nhaxe)
-                .into(imgViewBanner);
-            
-            if (imgEditPreview != null) {
-                Glide.with(this).load(nhaXe.getBannerUrl()).into(imgEditPreview);
-            }
+            Glide.with(this).load(nhaXe.getBannerUrl()).placeholder(R.drawable.banner_nhaxe).into(imgViewBanner);
+            Glide.with(this).load(nhaXe.getBannerUrl()).into(imgEditPreview);
         }
     }
-
 
     private void enterEditMode() {
         isEditing = true;
-        
-        // Đồng bộ dữ liệu hiện có từ TextView sang EditText để đảm bảo form không bị trống
-        syncDataToEditForm();
-        
-        if (layoutViewMode != null) layoutViewMode.setVisibility(View.GONE);
-        if (layoutEditMode != null) layoutEditMode.setVisibility(View.VISIBLE);
-        if (txtToolbarTitle != null) txtToolbarTitle.setText("Chỉnh sửa Thông tin nhà xe");
+        layoutViewMode.setVisibility(View.GONE);
+        layoutEditMode.setVisibility(View.VISIBLE);
+        txtToolbarTitle.setText("Chỉnh sửa Thông tin nhà xe");
         clearErrors();
-    }
-
-    private void syncDataToEditForm() {
-        if (tvViewBusName != null && edtBusName != null) {
-            String val = tvViewBusName.getText().toString();
-            edtBusName.setText(val.equals("Chưa cập nhật") ? "" : val);
-        }
-        if (tvViewRepName != null && edtRepName != null) {
-            String val = tvViewRepName.getText().toString();
-            edtRepName.setText(val.equals("Chưa cập nhật") ? "" : val);
-        }
-        if (tvViewAddress != null && edtAddress != null) {
-            String val = tvViewAddress.getText().toString();
-            edtAddress.setText(val.equals("Chưa cập nhật") ? "" : val);
-        }
-        if (tvViewPhone != null && edtPhone != null) {
-            String val = tvViewPhone.getText().toString();
-            edtPhone.setText(val.equals("Chưa cập nhật") ? "" : val);
-        }
     }
 
     private void exitEditMode() {
         isEditing = false;
-        if (layoutViewMode != null) layoutViewMode.setVisibility(View.VISIBLE);
-        if (layoutEditMode != null) layoutEditMode.setVisibility(View.GONE);
-        if (txtToolbarTitle != null) txtToolbarTitle.setText("Thông tin nhà xe");
+        layoutViewMode.setVisibility(View.VISIBLE);
+        layoutEditMode.setVisibility(View.GONE);
+        txtToolbarTitle.setText("Thông tin nhà xe");
     }
 
     private void showCancelConfirmationDialog() {
-        View dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_confirm_cancel, null);
-        AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setView(dialogView);
-
-        AlertDialog dialog = builder.create();
-        if (dialog.getWindow() != null) {
-            dialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
-        }
-
-        Button btnNo = dialogView.findViewById(R.id.btnNo);
-        Button btnYes = dialogView.findViewById(R.id.btnYes);
-
-        if (btnNo != null) btnNo.setOnClickListener(v -> dialog.dismiss());
-        if (btnYes != null) btnYes.setOnClickListener(v -> {
+        View dv = LayoutInflater.from(this).inflate(R.layout.dialog_confirm_cancel, null);
+        AlertDialog dialog = new AlertDialog.Builder(this).setView(dv).create();
+        if (dialog.getWindow() != null) dialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+        
+        dv.findViewById(R.id.btnNo).setOnClickListener(v -> dialog.dismiss());
+        dv.findViewById(R.id.btnYes).setOnClickListener(v -> {
             dialog.dismiss();
             exitEditMode();
         });
-
         dialog.show();
     }
 
     private void validateAndSave() {
         clearErrors();
-        boolean isValid = true;
-
         String busName = edtBusName.getText().toString().trim();
         String repName = edtRepName.getText().toString().trim();
         String address = edtAddress.getText().toString().trim();
         String phone = edtPhone.getText().toString().trim();
+        String email = edtEmail != null ? edtEmail.getText().toString().trim() : tvViewEmail.getText().toString();
 
-        if (TextUtils.isEmpty(busName)) {
-            showFieldError(edtBusName, tvErrorBusName, "Vui lòng nhập Tên nhà xe.");
-            isValid = false;
-        }
-        if (TextUtils.isEmpty(repName)) {
-            showFieldError(edtRepName, tvErrorRepName, "Vui lòng nhập Họ tên người đại diện.");
-            isValid = false;
-        }
-        if (TextUtils.isEmpty(address)) {
-            showFieldError(edtAddress, tvErrorAddress, "Vui lòng nhập Địa chỉ trụ sở.");
-            isValid = false;
-        }
-        if (TextUtils.isEmpty(phone)) {
-            showFieldError(edtPhone, tvErrorPhone, "Vui lòng nhập Số điện thoại.");
-            isValid = false;
-        }
-
-        if (!isValid) return;
-
-        if (isValid) {
-            handleUpdate(busName, repName, address, phone);
-        }
+        if (busName.isEmpty()) { showFieldError(edtBusName, tvErrorBusName, "Vui lòng nhập tên nhà xe"); return; }
+        
+        handleUpdate(busName, repName, address, phone, email);
     }
 
-    private void handleUpdate(String name, String rep, String addr, String phone) {
+    private void handleUpdate(String name, String rep, String addr, String phone, String email) {
         Map<String, String> data = new HashMap<>();
         data.put("NhaxeID", opUid);
         data.put("Tennhaxe", name);
         data.put("TenNguoiDaiDien", rep);
         data.put("DiaChiTruSo", addr);
         data.put("SoDienThoai", phone);
-        data.put("Email", opEmail.isEmpty() ? "nhaxe@gmail.com" : opEmail);
-        data.put("AnhDaiDienURL", selectedImageBase64);
-
-        AlertDialog loadingDialog = new AlertDialog.Builder(this)
-                .setMessage("Đang lưu thông tin nhà xe...")
-                .setCancelable(false)
-                .create();
-        loadingDialog.show();
+        data.put("Email", email);
+        data.put("AnhDaiDien", selectedImageBase64);
 
         apiService.updateNhaXeProfile(opUid, data).enqueue(new Callback<Void>() {
             @Override
             public void onResponse(Call<Void> call, Response<Void> response) {
-                loadingDialog.dismiss();
                 if (response.isSuccessful()) {
-                    updateViewMode(name, rep, addr, phone);
                     showSuccessPopup();
                 } else {
-                    String errorMsg = "Lưu thất bại! (Mã lỗi: " + response.code() + ")";
-                    try {
-                        if (response.errorBody() != null) {
-                            errorMsg += "\nServer phản hồi: " + response.errorBody().string();
-                        }
-                    } catch (Exception e) { e.printStackTrace(); }
-                    
-                    new AlertDialog.Builder(QLNhaxeActivity.this)
-                            .setTitle("Lỗi Backend")
-                            .setMessage(errorMsg)
-                            .setPositiveButton("Đã hiểu", null)
-                            .show();
+                    Toast.makeText(QLNhaxeActivity.this, "Cập nhật thất bại: " + response.code(), Toast.LENGTH_SHORT).show();
                 }
             }
-
-            @Override
-            public void onFailure(Call<Void> call, Throwable t) {
-                loadingDialog.dismiss();
-                Toast.makeText(QLNhaxeActivity.this, "Lỗi kết nối: " + t.getMessage(), Toast.LENGTH_LONG).show();
+            @Override public void onFailure(Call<Void> call, Throwable t) {
+                Toast.makeText(QLNhaxeActivity.this, "Lỗi kết nối", Toast.LENGTH_SHORT).show();
             }
         });
     }
 
-    private String encodeImageToBase64(Uri imageUri) {
-        try {
-            Bitmap bitmap = MediaStore.Images.Media.getBitmap(getContentResolver(), imageUri);
-            ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-            bitmap.compress(Bitmap.CompressFormat.JPEG, 40, outputStream);
-            byte[] byteArray = outputStream.toByteArray();
-            return "data:image/jpeg;base64," + Base64.encodeToString(byteArray, Base64.DEFAULT);
-        } catch (Exception e) {
-            return "";
-        }
-    }
-
-    private void showFieldError(EditText editText, TextView errorTextView, String message) {
-        editText.setBackgroundResource(R.drawable.bg_input_error);
-        if (errorTextView != null) {
-            errorTextView.setText(message);
-            errorTextView.setVisibility(View.VISIBLE);
-        }
-    }
-
-    private void clearErrors() {
-        if (edtBusName != null) edtBusName.setBackgroundResource(R.drawable.bg_input_white);
-        if (edtRepName != null) edtRepName.setBackgroundResource(R.drawable.bg_input_white);
-        if (edtAddress != null) edtAddress.setBackgroundResource(R.drawable.bg_input_white);
-        if (edtPhone != null) edtPhone.setBackgroundResource(R.drawable.bg_input_white);
-
-        if (tvErrorBusName != null) tvErrorBusName.setVisibility(View.GONE);
-        if (tvErrorRepName != null) tvErrorRepName.setVisibility(View.GONE);
-        if (tvErrorAddress != null) tvErrorAddress.setVisibility(View.GONE);
-        if (tvErrorPhone != null) tvErrorPhone.setVisibility(View.GONE);
-    }
-
     private void showSuccessPopup() {
-        View dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_update_success, null);
-        AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setView(dialogView);
-
-        AlertDialog dialog = builder.create();
-        if (dialog.getWindow() != null) {
-            dialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
-        }
-
+        View dv = LayoutInflater.from(this).inflate(R.layout.dialog_update_success, null);
+        AlertDialog dialog = new AlertDialog.Builder(this).setView(dv).create();
+        if (dialog.getWindow() != null) dialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
         dialog.show();
 
         new Handler().postDelayed(() -> {
             if (dialog.isShowing()) {
                 dialog.dismiss();
                 exitEditMode();
+                loadDataFromApi();
             }
         }, 2000);
     }
 
-    private void updateViewMode(String name, String rep, String addr, String phone) {
-        if (tvViewBusName != null) tvViewBusName.setText(name);
-        if (tvViewBusNameHeader != null) tvViewBusNameHeader.setText(name);
-        if (tvViewRepName != null) tvViewRepName.setText(rep);
-        if (tvViewAddress != null) tvViewAddress.setText(addr);
-        if (tvViewPhone != null) tvViewPhone.setText(phone);
+    private String encodeImageToBase64(Uri uri) {
+        try {
+            Bitmap bitmap = MediaStore.Images.Media.getBitmap(getContentResolver(), uri);
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            bitmap.compress(Bitmap.CompressFormat.JPEG, 40, baos);
+            return "data:image/jpeg;base64," + Base64.encodeToString(baos.toByteArray(), Base64.NO_WRAP);
+        } catch (Exception e) { return ""; }
+    }
+
+    private void showFieldError(EditText et, TextView tv, String msg) {
+        et.setBackgroundResource(R.drawable.bg_input_error);
+        if (tv != null) { tv.setText(msg); tv.setVisibility(View.VISIBLE); }
+    }
+
+    private void clearErrors() {
+        edtBusName.setBackgroundResource(R.drawable.bg_input_white);
+        edtRepName.setBackgroundResource(R.drawable.bg_input_white);
+        edtAddress.setBackgroundResource(R.drawable.bg_input_white);
+        edtPhone.setBackgroundResource(R.drawable.bg_input_white);
+        if (tvErrorBusName != null) tvErrorBusName.setVisibility(View.GONE);
+        if (tvErrorRepName != null) tvErrorRepName.setVisibility(View.GONE);
+        if (tvErrorAddress != null) tvErrorAddress.setVisibility(View.GONE);
+        if (tvErrorPhone != null) tvErrorPhone.setVisibility(View.GONE);
     }
 }

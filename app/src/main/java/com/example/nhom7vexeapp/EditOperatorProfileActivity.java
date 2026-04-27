@@ -14,7 +14,6 @@ import android.util.Base64;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
-import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.TextView;
@@ -163,9 +162,8 @@ public class EditOperatorProfileActivity extends AppCompatActivity {
 
     private void handleSmartUpdate() {
         ApiService apiService = ApiClient.getClient().create(ApiService.class);
-        Toast.makeText(this, "Đang cập nhật...", Toast.LENGTH_SHORT).show();
 
-        Map<String, String> data = new HashMap<>();
+        Map<String, Object> data = new HashMap<>();
         data.put("NhaxeID", opUid);
         data.put("Tennhaxe", edtName.getText().toString().trim()); 
         data.put("TenNguoiDaiDien", edtRep.getText().toString().trim());
@@ -178,7 +176,7 @@ public class EditOperatorProfileActivity extends AppCompatActivity {
             @Override
             public void onResponse(Call<Void> call, Response<Void> response) {
                 if (response.isSuccessful()) {
-                    showSuccessPopup();
+                    showSuccessPopup("Cập nhật thông tin nhà xe thành công");
                 } else {
                     Log.e(TAG, "Update failed: " + response.code());
                     Toast.makeText(EditOperatorProfileActivity.this, "Lỗi cập nhật: " + response.code(), Toast.LENGTH_SHORT).show();
@@ -208,17 +206,24 @@ public class EditOperatorProfileActivity extends AppCompatActivity {
         return true; 
     }
 
-    private void showSuccessPopup() {
+    private void showSuccessPopup(String message) {
         View dv = getLayoutInflater().inflate(R.layout.dialog_update_success, null);
+        TextView tvMsg = dv.findViewById(R.id.tvSuccessMessage);
+        if (tvMsg != null) tvMsg.setText(message);
+
         AlertDialog dialog = new AlertDialog.Builder(this).setView(dv).create();
-        if (dialog.getWindow() != null) dialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+        if (dialog.getWindow() != null) {
+            dialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+        }
+        
         dialog.show();
+
         new Handler().postDelayed(() -> { 
             if (dialog.isShowing()) { 
                 dialog.dismiss(); 
                 setResult(RESULT_OK); 
                 finish(); 
             } 
-        }, 1500);
+        }, 2000);
     }
 }

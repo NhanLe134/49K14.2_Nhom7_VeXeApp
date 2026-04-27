@@ -11,7 +11,6 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
-import android.widget.LinearLayout;
 import android.widget.RatingBar;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -33,6 +32,7 @@ import retrofit2.Response;
 
 public class VietNhanXetActivity extends AppCompatActivity {
 
+    private static final String TAG = "VietNhanXet";
     private ApiService apiService;
     private SharedPreferences sharedPreferences;
     private String ticketId, tripId;
@@ -55,7 +55,6 @@ public class VietNhanXetActivity extends AppCompatActivity {
         edtComment = findViewById(R.id.edtComment);
         Button btnSubmit = findViewById(R.id.btnSubmitReview);
         
-        // Ép màu vàng cho sao
         ratingBar.setProgressTintList(android.content.res.ColorStateList.valueOf(Color.parseColor("#FFD700")));
 
         Intent intent = getIntent();
@@ -77,6 +76,10 @@ public class VietNhanXetActivity extends AppCompatActivity {
                 Toast.makeText(this, "Vui lòng chọn số sao!", Toast.LENGTH_SHORT).show();
                 return;
             }
+            if (ticketId == null || ticketId.isEmpty()) {
+                Toast.makeText(this, "Không tìm thấy thông tin vé!", Toast.LENGTH_SHORT).show();
+                return;
+            }
             fetchNextIdAndSubmit(rating, comment);
         });
 
@@ -87,16 +90,19 @@ public class VietNhanXetActivity extends AppCompatActivity {
         apiService.getFeedbacks().enqueue(new Callback<List<Map<String, Object>>>() {
             @Override
             public void onResponse(Call<List<Map<String, Object>>> call, Response<List<Map<String, Object>>> response) {
-                String nextId = "DG00001";
+                String nextId = "DG" + (System.currentTimeMillis() % 1000000);
                 if (response.isSuccessful() && response.body() != null) {
                     int max = 0;
                     for (Map<String, Object> fb : response.body()) {
-                        String idStr = String.valueOf(fb.get("DanhGiaID"));
-                        if (idStr.startsWith("DG")) {
-                            try {
-                                int num = Integer.parseInt(idStr.substring(2));
-                                if (num > max) max = num;
-                            } catch (Exception e) {}
+                        Object idObj = fb.get("DanhGiaID");
+                        if (idObj != null) {
+                            String idStr = idObj.toString();
+                            if (idStr.startsWith("DG")) {
+                                try {
+                                    int num = Integer.parseInt(idStr.substring(2));
+                                    if (num > max) max = num;
+                                } catch (Exception e) {}
+                            }
                         }
                     }
                     nextId = String.format("DG%05d", max + 1);
@@ -112,6 +118,11 @@ public class VietNhanXetActivity extends AppCompatActivity {
     private void submitFeedback(String id, float rating, String comment) {
         String khId = sharedPreferences.getString("customerUid", "");
         
+        if (khId.isEmpty()) {
+            Toast.makeText(this, "Lỗi: Không tìm thấy ID khách hàng. Vui lòng đăng nhập lại!", Toast.LENGTH_LONG).show();
+            return;
+        }
+
         Map<String, Object> data = new HashMap<>();
         data.put("DanhGiaID", id);
         data.put("Ve", ticketId);
@@ -119,16 +130,39 @@ public class VietNhanXetActivity extends AppCompatActivity {
         data.put("Diemso", (int)rating);
         data.put("Nhanxet", comment);
 
+        // IN LOG ĐỂ KIỂM TRA TRƯỚC KHI GỬI
+        Log.e(TAG, "------------------------------------------");
+        Log.e(TAG, "DỮ LIỆU GỬI LÊN SERVER:");
+        Log.e(TAG, "{");
+        Log.e(TAG, "  \"DanhGiaID\": \"" + id + "\",");
+        Log.e(TAG, "  \"Ve\": \"" + ticketId + "\",");
+        Log.e(TAG, "  \"KhachHang\": \"" + khId + "\",");
+        Log.e(TAG, "  \"Diemso\": " + (int)rating + ",");
+        Log.e(TAG, "  \"Nhanxet\": \"" + comment + "\"");
+        Log.e(TAG, "}");
+        Log.e(TAG, "------------------------------------------");
+
         apiService.sendFeedback(data).enqueue(new Callback<Void>() {
             @Override
             public void onResponse(Call<Void> call, Response<Void> response) {
                 if (response.isSuccessful()) {
                     updateTicketStatusOnServer();
                 } else {
-                    Toast.makeText(VietNhanXetActivity.this, "Gửi thất bại: " + response.code(), Toast.LENGTH_SHORT).show();
+                    String errorBody = "";
+                    try {
+                        if (response.errorBody() != null) {
+                            errorBody = response.errorBody().string();
+                        }
+                    } catch (Exception e) {}
+                    
+                    Log.e(TAG, "GỬI THẤT BẠI - MÃ LỖI: " + response.code());
+                    Log.e(TAG, "CHI TIẾT LỖI TỪ SERVER: " + errorBody);
+                    
+                    Toast.makeText(VietNhanXetActivity.this, "Lỗi: " + response.code(), Toast.LENGTH_SHORT).show();
                 }
             }
             @Override public void onFailure(Call<Void> call, Throwable t) {
+                Log.e(TAG, "LỖI KẾT NỐI SERVER: " + t.getMessage());
                 Toast.makeText(VietNhanXetActivity.this, "Lỗi kết nối!", Toast.LENGTH_SHORT).show();
             }
         });
@@ -147,7 +181,7 @@ public class VietNhanXetActivity extends AppCompatActivity {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         View view = LayoutInflater.from(this).inflate(R.layout.dialog_success, null);
         TextView tv = view.findViewById(R.id.tvMessage);
-        tv.setText("Gửi đánh giá thành công");
+        if (tv != null) tv.setText("Gửi đánh giá thành công");
         builder.setView(view);
         AlertDialog dialog = builder.create();
         if (dialog.getWindow() != null) dialog.getWindow().setBackgroundDrawable(new ColorDrawable(android.graphics.Color.TRANSPARENT));
@@ -164,7 +198,7 @@ public class VietNhanXetActivity extends AppCompatActivity {
                         if (id.equals(t.getId())) {
                             String start = cleanTime(t.getTime());
                             String end = cleanTime(t.getEndTime());
-                            String datePart = originalDateTime.split(" ")[0];
+                            String datePart = originalDateTime.contains(" ") ? originalDateTime.split(" ")[0] : originalDateTime;
                             tvDateTime.setText(datePart + "  " + start + " - " + end);
                             break;
                         }

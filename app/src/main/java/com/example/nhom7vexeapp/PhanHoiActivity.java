@@ -86,7 +86,6 @@ public class PhanHoiActivity extends AppCompatActivity {
             showLoginRequiredDialog();
             return;
         }
-        // Load Chuyến xe trước để có cache
         apiService.getChuyenXe().enqueue(new Callback<List<TripSearchResult>>() {
             @Override
             public void onResponse(Call<List<TripSearchResult>> call, Response<List<TripSearchResult>> response) {
@@ -114,9 +113,7 @@ public class PhanHoiActivity extends AppCompatActivity {
                         public void onResponse(Call<List<Map<String, Object>>> call, Response<List<Map<String, Object>>> response) {
                             if (response.isSuccessful() && response.body() != null) {
                                 allFeedbacks.clear();
-                                for (Map<String, Object> fb : response.body()) {
-                                    if (customerId.equals(getFieldId(fb.get("KhachHang")))) allFeedbacks.add(fb);
-                                }
+                                allFeedbacks.addAll(response.body());
                                 showPendingFeedback();
                             }
                         }
@@ -139,11 +136,21 @@ public class PhanHoiActivity extends AppCompatActivity {
 
         boolean hasData = false;
         for (Map<String, Object> ticket : allUserTickets) {
+            String ticketId = getFieldId(ticket.get("VeID"));
             String trangThaiDanhGia = getString(ticket, "TrangThaiDanhGia");
             String ngayKetThuc = getString(ticket, "NgayKetThuc");
 
-            // LOGIC: Chỉ hiện vé "Chờ đánh giá" và CHƯA QUÁ 7 NGÀY
-            if ("Chờ đánh giá".equals(trangThaiDanhGia) && !isOver7Days(ngayKetThuc)) {
+            // KIỂM TRA: Vé này đã có đánh giá thực tế trong bảng DanhGia chưa?
+            boolean alreadyHasReview = false;
+            for (Map<String, Object> fb : allFeedbacks) {
+                if (ticketId.equals(getFieldId(fb.get("Ve")))) {
+                    alreadyHasReview = true;
+                    break;
+                }
+            }
+
+            // CHỈ HIỆN: Chờ đánh giá + Chưa quá 7 ngày + CHƯA CÓ TRONG BẢNG DANHGIA
+            if ("Chờ đánh giá".equals(trangThaiDanhGia) && !isOver7Days(ngayKetThuc) && !alreadyHasReview) {
                 hasData = true;
                 View itemView = inflater.inflate(R.layout.item_phan_hoi, layoutFeedbackList, false);
                 TicketInfo info = extractTicketInfo(ticket);
@@ -160,7 +167,7 @@ public class PhanHoiActivity extends AppCompatActivity {
 
                 itemView.findViewById(R.id.btnWriteReview).setOnClickListener(v -> {
                     Intent intent = new Intent(this, VietNhanXetActivity.class);
-                    intent.putExtra("ticket_id", getFieldId(ticket.get("VeID")));
+                    intent.putExtra("ticket_id", ticketId);
                     intent.putExtra("trip_id", getFieldId(ticket.get("ChuyenXe")));
                     intent.putExtra("bus_company", info.busName);
                     intent.putExtra("route", info.route);
@@ -170,7 +177,7 @@ public class PhanHoiActivity extends AppCompatActivity {
                 layoutFeedbackList.addView(itemView);
             }
         }
-        if (!hasData) showEmptyMessage("Không có chuyến xe nào chờ đánh giá hoặc đã hết hạn.");
+        if (!hasData) showEmptyMessage("Không có chuyến xe nào chờ đánh giá.");
     }
 
     private void showReviewedFeedback() {
@@ -182,11 +189,13 @@ public class PhanHoiActivity extends AppCompatActivity {
         boolean hasData = false;
 
         for (Map<String, Object> fb : allFeedbacks) {
+            // Chỉ hiện đánh giá của chính khách hàng này
+            if (!customerId.equals(getFieldId(fb.get("KhachHang")))) continue;
+
             hasData = true;
             View itemView = inflater.inflate(R.layout.item_da_danh_gia, layoutFeedbackList, false);
             String ticketId = getFieldId(fb.get("Ve"));
             
-            // Tìm thông tin nhà xe từ ticketId tương ứng
             String busName = "Nhà xe";
             String date = "";
             for(Map<String, Object> t : allUserTickets) {
@@ -210,7 +219,6 @@ public class PhanHoiActivity extends AppCompatActivity {
     private boolean isOver7Days(String dateStr) {
         if (dateStr == null || dateStr.isEmpty()) return false;
         try {
-            // Django format: 2024-03-28T14:30:00Z
             SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
             Date endDate = sdf.parse(dateStr);
             long diff = new Date().getTime() - endDate.getTime();
