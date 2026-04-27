@@ -28,6 +28,7 @@ import com.example.nhom7vexeapp.api.ApiClient;
 import com.example.nhom7vexeapp.api.ApiService;
 import com.example.nhom7vexeapp.models.ChiTietTaiXeModel;
 import com.example.nhom7vexeapp.models.Trip;
+import com.example.nhom7vexeapp.models.VehicleManaged;
 import com.google.android.material.tabs.TabLayout;
 
 import java.text.SimpleDateFormat;
@@ -288,12 +289,10 @@ public class DriverScheduleMonitoringActivity extends AppCompatActivity {
 
         rvRoutePoints.setLayoutManager(new LinearLayoutManager(this));
         
-        // Mặc định hiện tab Lộ trình (index 1) trước
         tabLayout.getTabAt(1).select();
         layoutTabRoute.setVisibility(View.VISIBLE);
         layoutTabVehicle.setVisibility(View.GONE);
 
-        // Load Route Data (Tickets) - Sắp xếp điểm đón xong mới tới điểm trả
         apiService.getTicketsByTrip(trip.getId()).enqueue(new Callback<List<Map<String, Object>>>() {
             @Override
             public void onResponse(Call<List<Map<String, Object>>> call, Response<List<Map<String, Object>>> response) {
@@ -318,26 +317,25 @@ public class DriverScheduleMonitoringActivity extends AppCompatActivity {
             @Override public void onFailure(Call<List<Map<String, Object>>> call, Throwable t) { tvNoTickets.setVisibility(View.VISIBLE); }
         });
 
-        // Load Vehicle Data
-        apiService.getVehicles().enqueue(new Callback<List<Map<String, Object>>>() {
+        // FIX LỖI: Sử dụng Model VehicleManaged thay vì Map<String, Object>
+        apiService.getVehicles().enqueue(new Callback<List<VehicleManaged>>() {
             @Override
-            public void onResponse(Call<List<Map<String, Object>>> call, Response<List<Map<String, Object>>> response) {
+            public void onResponse(Call<List<VehicleManaged>> call, Response<List<VehicleManaged>> response) {
                 if (response.isSuccessful() && response.body() != null) {
-                    for (Map<String, Object> v : response.body()) {
-                        if (v.get("XeID") != null && v.get("XeID").toString().equals(trip.getXeID())) {
-                            tvPlate.setText(v.get("BienSoXe") != null ? v.get("BienSoXe").toString() : "---");
-                            tvSeats.setText(v.get("SoGhe") != null ? v.get("SoGhe").toString() : "---");
-                            tvStatus.setText(v.get("TrangThai") != null ? v.get("TrangThai").toString() : "---");
-                            tvType.setText(v.get("Loaixe") != null ? v.get("Loaixe").toString() : "---");
+                    for (VehicleManaged v : response.body()) {
+                        if (v.getXeID() != null && v.getXeID().equalsIgnoreCase(trip.getXeID())) {
+                            tvPlate.setText(v.getBienSoXe());
+                            tvSeats.setText(v.getSoGhe() != null ? String.valueOf(v.getSoGhe()) : "---");
+                            tvStatus.setText(v.getTrangThai());
+                            tvType.setText(v.getLoaiXeIDStr());
                             break;
                         }
                     }
                 }
             }
-            @Override public void onFailure(Call<List<Map<String, Object>>> call, Throwable t) {}
+            @Override public void onFailure(Call<List<VehicleManaged>> call, Throwable t) {}
         });
 
-        // Hiệu ứng to nhỏ khi chuyển tab
         tabLayout.addOnTabSelectedListener(new TabLayout.OnTabSelectedListener() {
             @Override
             public void onTabSelected(TabLayout.Tab tab) {

@@ -6,13 +6,13 @@ import com.example.nhom7vexeapp.models.Loaixe;
 import com.example.nhom7vexeapp.models.Seat;
 import com.example.nhom7vexeapp.models.Ticket;
 import com.example.nhom7vexeapp.models.Trip;
-import com.example.nhom7vexeapp.models.TripResponse;
 import com.example.nhom7vexeapp.models.TripSearchResult;
 import com.example.nhom7vexeapp.models.TaixeModel;
 import com.example.nhom7vexeapp.models.ChiTietTaiXeModel;
 import com.example.nhom7vexeapp.models.UserModel;
 import com.example.nhom7vexeapp.models.NhaXe;
 import com.example.nhom7vexeapp.models.Route;
+import com.example.nhom7vexeapp.models.VehicleManaged;
 import com.example.nhom7vexeapp.TicketModel;
 import com.example.nhom7vexeapp.api.CustomerResponse;
 import com.example.nhom7vexeapp.api.LoginResponse;
@@ -32,10 +32,10 @@ public interface ApiService {
     Call<LoginResponse> login(@Body com.example.nhom7vexeapp.models.LoginRequest loginRequest);
 
     @GET("api/user-auth/")
-    Call<List<CustomerResponse>> getUsers(); 
+    Call<List<CustomerResponse>> getUsers();
 
     @GET("api/user-auth/")
-    Call<List<UserModel>> getUsers(@Query("Method") String method); 
+    Call<List<UserModel>> getUsers(@Query("Method") String method);
 
     @GET("api/user-auth/{id}/")
     Call<CustomerResponse> getUserAuthDetail(@Path("id") String id);
@@ -60,6 +60,33 @@ public interface ApiService {
     @GET("api/taixe/")
     Call<List<TaixeModel>> getTaixeList(@Query("Method") String method);
 
+    // --- 3. QUẢN LÝ PHƯƠNG TIỆN ---
+    @GET("api/xe/")
+    Call<List<VehicleManaged>> getVehicles();
+
+    @POST("api/xe/")
+    Call<Void> createVehicle(@Body Map<String, Object> data);
+
+    @PUT("api/xe/{id}/")
+    Call<VehicleManaged> updateVehicle(@Path("id") String id, @Body VehicleManaged vehicle);
+
+    @DELETE("api/xe/{id}/")
+    Call<Void> deleteVehicle(@Path("id") String id);
+
+    // --- 4. QUẢN LÝ TUYẾN XE ---
+    @GET("api/tuyenxe/")
+    Call<List<Route>> getRoutes();
+
+    @POST("api/tuyenxe/")
+    Call<Void> createRoute(@Body Map<String, String> data);
+
+    @PUT("api/tuyenxe/{id}/")
+    Call<Void> updateRoute(@Path("id") String id, @Body Map<String, String> data);
+
+    @DELETE("api/tuyenxe/{id}/")
+    Call<Void> deleteRoute(@Path("id") String id);
+
+    // --- 5. TÀI XẾ ---
     @GET("api/taixe/")
     Call<List<Map<String, Object>>> getDriversRaw();
 
@@ -128,6 +155,9 @@ public interface ApiService {
     @GET("api/ve/")
     Call<List<Map<String, Object>>> getTicketsByTrip(@Query("ChuyenXe") String tripId);
 
+    @GET("api/ve/")
+    Call<List<Map<String, Object>>> getAllTickets();
+
     @PATCH("api/ve/{id}/")
     Call<Void> patchTicket(@Path("id") String id, @Body Map<String, Object> data);
 
@@ -148,18 +178,18 @@ public interface ApiService {
 
     // --- 6. TUYẾN XE (ROUTE) ---
     @GET("api/tuyenxe/")
-    Call<List<Map<String, Object>>> getRoutes();
+    Call<List<Map<String, Object>>> getRoutesRaw();
 
     @GET("api/tuyenxe/")
     Call<List<Route>> getRoutesModel();
-
-    @PUT("api/tuyenxe/{id}/")
-    Call<Void> updateRoute(@Path("id") String id, @Body Map<String, String> data);
 
 
     // --- 7. QUẢN LÝ KHÁCH HÀNG (CUSTOMER) ---
     @GET("api/khachhang/")
     Call<List<Map<String, Object>>> getKhachHangList();
+
+    @POST("api/khachhang/")
+    Call<KhachHang> register(@Body Map<String, String> data);
 
     @POST("api/khachhang/")
     Call<Void> createKhachHangProfile(@Body Map<String, String> data);
@@ -180,9 +210,6 @@ public interface ApiService {
     @GET("api/khachhang/{id}/")
     Call<KhachHang> getProfile(@Path("id") String id);
 
-    @POST("api/khachhang/")
-    Call<KhachHang> register(@Body Map<String, String> body);
-
     @PUT("api/khachhang/{id}/")
     Call<Void> updateKhachHang(@Path("id") String id, @Body Map<String, String> data);
 
@@ -201,7 +228,7 @@ public interface ApiService {
     Call<Void> createNhaXeProfile(@Body Map<String, String> data);
 
     @GET("api/nhaxe/{id}/")
-    Call<NhaXe> getNhaXeDetail(@Path("id") String id); 
+    Call<NhaXe> getNhaXeDetail(@Path("id") String id);
 
     @GET("api/nhaxe/{id}/")
     Call<Map<String, Object>> getNhaXeDetailRaw(@Path("id") String id);
@@ -210,16 +237,23 @@ public interface ApiService {
     Call<Void> updateNhaXeProfile(@Path("id") String id, @Body Map<String, String> data);
 
     @PATCH("api/nhaxe/{id}/")
-    Call<Void> patchNhaXeProfile(@Path("id") String id, @Body Map<String, String> data);
-
+    Call<Void> patchNhaXeProfile(@Path("id") String id, @Body Map<String, Object> data);
 
     // --- 9. XE & LOẠI XE (VEHICLES) ---
     @GET("api/xe/")
-    Call<List<Map<String, Object>>> getVehicles();
+    Call<List<Map<String, Object>>> getVehiclesRaw();
 
+    // --- 10. LOẠI XE ---
     @GET("api/loaixe/")
     Call<List<Loaixe>> getLoaixe();
 
     @PUT("api/loaixe/{id}/")
     Call<Loaixe> updateLoaixe(@Path("id") String id, @Body Loaixe loaixe);
+
+    // --- 10. ĐÁNH GIÁ (FEEDBACK) ---
+    @GET("api/danhgia/")
+    Call<List<Map<String, Object>>> getFeedbacks();
+
+    @POST("api/danhgia/")
+    Call<Void> sendFeedback(@Body Map<String, Object> data);
 }
