@@ -4,20 +4,19 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.os.Bundle;
-import android.util.Log;
 import android.view.View;
 import android.widget.ImageView;
-import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
+
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.example.nhom7vexeapp.adapters.TicketAdapter;
 import com.example.nhom7vexeapp.api.ApiClient;
 import com.example.nhom7vexeapp.api.ApiService;
+import com.example.nhom7vexeapp.adapters.TicketAdapter;
 import com.example.nhom7vexeapp.models.Ticket;
 
 import java.util.ArrayList;
@@ -36,7 +35,7 @@ public class QLVeXeActivity extends AppCompatActivity implements TicketAdapter.O
     private List<Ticket> ticketList = new ArrayList<>();
     private TextView tabBooked, tabCompleted, tabCancelled, tvListTitle, tvEmptyMessage;
     private ProgressBar progressBar;
-    private String currentStatus = "Đã đặt"; // Mặc định khớp với hiển thị
+    private String currentStatus = "Đã đặt";
     private String customerId;
     private ApiService apiService;
     private ImageView btnProfileHeader;
@@ -110,8 +109,6 @@ public class QLVeXeActivity extends AppCompatActivity implements TicketAdapter.O
 
     private void loadTickets() {
         if (customerId.isEmpty()) {
-            // Không hiển thị lỗi ở đây để tránh làm phiền người dùng chưa đăng nhập, 
-            // chỉ hiện tin nhắn trống
             tvEmptyMessage.setText("Vui lòng đăng nhập để xem vé");
             tvEmptyMessage.setVisibility(View.VISIBLE);
             return;

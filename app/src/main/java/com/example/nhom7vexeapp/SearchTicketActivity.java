@@ -5,16 +5,23 @@ import android.app.TimePickerDialog;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
+import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
-import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.Spinner;
+import android.widget.TextView;
 import android.widget.Toast;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+
+import com.example.nhom7vexeapp.models.SearchHistory;
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
+
+import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
@@ -25,9 +32,9 @@ public class SearchTicketActivity extends AppCompatActivity {
     private EditText edtDate, edtTime;
     private Spinner spOrigin, spDestination;
     private Button btnSearchTicket;
-    private ImageView btnProfileHeader;
-    private LinearLayout navHome, navSearch, navTickets, navFeedback;
+    private LinearLayout navHome, navSearch, navTickets, navFeedback, llRecentHistory;
     private SharedPreferences sharedPreferences;
+    private Gson gson = new Gson();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -38,8 +45,8 @@ public class SearchTicketActivity extends AppCompatActivity {
 
         initViews();
         setupCityData();
-        setupEvents();
         setupBottomNavigation(); 
+        displayRecentHistory();
 
         edtDate.setOnClickListener(v -> openDatePicker());
         edtTime.setOnClickListener(v -> openTimePicker());
@@ -52,7 +59,7 @@ public class SearchTicketActivity extends AppCompatActivity {
         spOrigin = findViewById(R.id.spOrigin);
         spDestination = findViewById(R.id.spDestination);
         btnSearchTicket = findViewById(R.id.btnSearchTicket);
-        btnProfileHeader = findViewById(R.id.btnProfileHeader);
+        llRecentHistory = findViewById(R.id.llRecentHistory);
 
         navHome = findViewById(R.id.nav_home);
         navSearch = findViewById(R.id.nav_search);
@@ -60,24 +67,8 @@ public class SearchTicketActivity extends AppCompatActivity {
         navFeedback = findViewById(R.id.nav_feedback);
     }
 
-    private void setupEvents() {
-        if (btnProfileHeader != null) {
-            btnProfileHeader.setOnClickListener(v -> {
-                boolean isLoggedIn = sharedPreferences.getBoolean("isLoggedIn", false);
-                if (isLoggedIn) {
-                    startActivity(new Intent(this, CustomerProfileActivity.class));
-                } else {
-                    startActivity(new Intent(this, LoginActivity.class));
-                }
-            });
-        }
-    }
-
     private void setupBottomNavigation() {
-        if (navHome != null) navHome.setOnClickListener(v -> {
-            startActivity(new Intent(this, MainActivity.class));
-            finish();
-        });
+        if (navHome != null) navHome.setOnClickListener(v -> finish());
         if (navTickets != null) navTickets.setOnClickListener(v -> checkLoginAndNavigate(QLVeXeActivity.class));
         if (navFeedback != null) navFeedback.setOnClickListener(v -> checkLoginAndNavigate(PhanHoiActivity.class));
     }
@@ -140,11 +131,75 @@ public class SearchTicketActivity extends AppCompatActivity {
             return;
         }
 
+        saveSearchHistory(origin, destination, date, time);
+
         Intent intent = new Intent(this, VeResultsActivity.class);
         intent.putExtra("ORIGIN_KEY", origin);
         intent.putExtra("DESTINATION_KEY", destination);
         intent.putExtra("DATE_KEY", date);
         intent.putExtra("TIME_KEY", time);
         startActivity(intent);
+    }
+
+    private void saveSearchHistory(String origin, String dest, String date, String time) {
+        List<SearchHistory> history = getHistory();
+        SearchHistory newItem = new SearchHistory(origin, dest, date, time);
+        
+        for (int i = 0; i < history.size(); i++) {
+            if (history.get(i).equals(newItem)) {
+                history.remove(i);
+                break;
+            }
+        }
+        
+        history.add(0, newItem);
+        if (history.size() > 5) history.remove(5);
+
+        String json = gson.toJson(history);
+        sharedPreferences.edit().putString("search_history", json).apply();
+        displayRecentHistory();
+    }
+
+    private List<SearchHistory> getHistory() {
+        String json = sharedPreferences.getString("search_history", "");
+        if (json.isEmpty()) return new ArrayList<>();
+        Type type = new TypeToken<List<SearchHistory>>(){}.getType();
+        return gson.fromJson(json, type);
+    }
+
+    private void displayRecentHistory() {
+        llRecentHistory.removeAllViews();
+        List<SearchHistory> history = getHistory();
+        
+        for (SearchHistory item : history) {
+            View card = LayoutInflater.from(this).inflate(R.layout.item_search_history, llRecentHistory, false);
+            TextView tvRoute = card.findViewById(R.id.tvHistoryRoute);
+            TextView tvDetail = card.findViewById(R.id.tvHistoryDetail);
+            
+            tvRoute.setText(item.getOrigin() + " → " + item.getDest());
+            String dateText = item.getDate().isEmpty() ? "Tất cả ngày" : item.getDate();
+            String timeText = item.getTime().isEmpty() ? "" : " - " + item.getTime();
+            tvDetail.setText(dateText + timeText);
+
+            card.setOnClickListener(v -> {
+                selectSpinnerItem(spOrigin, item.getOrigin());
+                selectSpinnerItem(spDestination, item.getDest());
+                edtDate.setText(item.getDate());
+                edtTime.setText(item.getTime());
+                performSearch();
+            });
+
+            llRecentHistory.addView(card);
+        }
+    }
+
+    private void selectSpinnerItem(Spinner spinner, String value) {
+        ArrayAdapter adapter = (ArrayAdapter) spinner.getAdapter();
+        for (int i = 0; i < adapter.getCount(); i++) {
+            if (adapter.getItem(i).toString().equals(value)) {
+                spinner.setSelection(i);
+                break;
+            }
+        }
     }
 }

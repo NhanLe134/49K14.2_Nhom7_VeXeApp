@@ -23,45 +23,78 @@
             android:gravity="center"
             android:paddingBottom="16dp" />
 
-        <TextView
+        <LinearLayout
             android:id="@+id/btnStatusActive"
             android:layout_width="match_parent"
             android:layout_height="50dp"
-            android:text="Đang hoạt động"
-            android:gravity="center"
-            android:textSize="16sp"
-            android:textColor="#333333"
+            android:orientation="horizontal"
+            android:gravity="start|center_vertical"
+            android:paddingHorizontal="30dp"
             android:background="?attr/selectableItemBackground"
             android:clickable="true"
-            android:focusable="true" />
+            android:focusable="true">
+            <View
+                android:layout_width="10dp"
+                android:layout_height="10dp"
+                android:background="@drawable/ic_dot_green"
+                android:layout_marginEnd="15dp"/>
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Đang hoạt động"
+                android:textSize="16sp"
+                android:textColor="#000000" />
+        </LinearLayout>
 
-        <View android:layout_width="match_parent" android:layout_height="1dp" android:background="#EEEEEE" />
+        <View android:layout_width="match_parent" android:layout_height="1dp" android:background="#EEEEEE" android:layout_marginHorizontal="10dp" />
 
-        <TextView
+        <LinearLayout
             android:id="@+id/btnStatusMaintain"
             android:layout_width="match_parent"
             android:layout_height="50dp"
-            android:text="Bảo trì"
-            android:gravity="center"
-            android:textSize="16sp"
-            android:textColor="#333333"
+            android:orientation="horizontal"
+            android:gravity="start|center_vertical"
+            android:paddingHorizontal="30dp"
             android:background="?attr/selectableItemBackground"
             android:clickable="true"
-            android:focusable="true" />
+            android:focusable="true">
+            <View
+                android:layout_width="10dp"
+                android:layout_height="10dp"
+                android:background="@drawable/ic_dot_yellow"
+                android:layout_marginEnd="15dp"/>
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Bảo trì"
+                android:textSize="16sp"
+                android:textColor="#000000" />
+        </LinearLayout>
 
-        <View android:layout_width="match_parent" android:layout_height="1dp" android:background="#EEEEEE" />
+        <View android:layout_width="match_parent" android:layout_height="1dp" android:background="#EEEEEE" android:layout_marginHorizontal="10dp" />
 
-        <TextView
+        <LinearLayout
             android:id="@+id/btnStatusStop"
             android:layout_width="match_parent"
             android:layout_height="50dp"
-            android:text="Ngưng hoạt động"
-            android:gravity="center"
-            android:textSize="16sp"
-            android:textColor="#333333"
+            android:orientation="horizontal"
+            android:gravity="start|center_vertical"
+            android:paddingHorizontal="30dp"
             android:background="?attr/selectableItemBackground"
             android:clickable="true"
-            android:focusable="true" />
+            android:focusable="true">
+            <View
+                android:layout_width="10dp"
+                android:layout_height="10dp"
+                android:background="@drawable/ic_dot_red"
+                android:layout_marginEnd="15dp"/>
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Ngưng hoạt động"
+                android:textSize="16sp"
+                android:textColor="#000000" />
+        </LinearLayout>
 
     </LinearLayout>
 </androidx.cardview.widget.CardView>

@@ -1,26 +1,21 @@
 package com.example.nhom7vexeapp;
 
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.graphics.drawable.ColorDrawable;
 import android.os.Bundle;
 import android.os.Handler;
 import android.text.Editable;
-import android.text.TextUtils;
 import android.text.TextWatcher;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.EditText;
 import android.widget.ImageView;
-import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
-import java.util.HashMap;
-import java.util.Map;
-import java.text.Normalizer;
-import java.util.regex.Pattern;
-import java.util.Collections;
-import java.util.Comparator;
+import android.widget.Button;
 
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
@@ -28,21 +23,25 @@ import androidx.cardview.widget.CardView;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.example.nhom7vexeapp.adapters.RouteAdapter;
 import com.example.nhom7vexeapp.api.ApiClient;
 import com.example.nhom7vexeapp.api.ApiService;
-import com.example.nhom7vexeapp.adapters.RouteAdapter;
 import com.example.nhom7vexeapp.models.Route;
 import com.google.android.material.button.MaterialButton;
 
-import android.content.SharedPreferences;
+import java.text.Normalizer;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.regex.Pattern;
+
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
-
+// #Trang
 public class QLTuyenxeActivity extends AppCompatActivity implements RouteAdapter.OnRouteActionListener {
 
     private RecyclerView rvRoutes;
@@ -70,7 +69,7 @@ public class QLTuyenxeActivity extends AppCompatActivity implements RouteAdapter
         setContentView(R.layout.activity_ql_tuyenxe);
 
         SharedPreferences pref = getSharedPreferences("UserPrefs", MODE_PRIVATE);
-        opUid = pref.getString("op_uid", "");
+        opUid = pref.getString("op_uid", "NX00001");
         apiService = ApiClient.getClient().create(ApiService.class);
 
         initViews();
@@ -98,12 +97,6 @@ public class QLTuyenxeActivity extends AppCompatActivity implements RouteAdapter
         btnCancelForm = findViewById(R.id.btnCancelForm);
         edtAutoDistance = findViewById(R.id.edtAutoDistance);
         edtAutoTime = findViewById(R.id.edtAutoTime);
-
-        // Header Profile click
-        View imgOpProfile = findViewById(R.id.imgOpProfile);
-        if (imgOpProfile != null) {
-            imgOpProfile.setOnClickListener(v -> startActivity(new Intent(this, OperatorProfileActivity.class)));
-        }
     }
 
     private void setupRecyclerView() {
@@ -115,22 +108,63 @@ public class QLTuyenxeActivity extends AppCompatActivity implements RouteAdapter
 
     private void fetchRoutesFromApi() {
         if (opUid == null || opUid.isEmpty()) return;
-        apiService.getRoutes().enqueue(new Callback<List<Route>>() {
+        apiService.getRoutesRaw().enqueue(new Callback<List<Map<String, Object>>>() {
             @Override
-            public void onResponse(Call<List<Route>> call, Response<List<Route>> response) {
+            public void onResponse(Call<List<Map<String, Object>>> call, Response<List<Map<String, Object>>> response) {
                 if (response.isSuccessful() && response.body() != null) {
                     routeList.clear();
-                    for (Route route : response.body()) {
-                        if (route.getNhaXeId() != null && route.getNhaXeId().equalsIgnoreCase(opUid)) {
-                            routeList.add(route);
+                    for (Map<String, Object> rMap : response.body()) {
+                        String nhaXeId = findVal(rMap, "Nhaxe", "NhaxeID", "nhaXe");
+                        if (opUid.equals(nhaXeId)) {
+                            String id = findVal(rMap, "TuyenXeID", "id", "tuyenXeID");
+                            String name = findVal(rMap, "TenTuyen", "name", "tenTuyen");
+                            String start = findVal(rMap, "DiemDi", "startPoint", "diemDi");
+                            String mid = findVal(rMap, "DiemTrungGian", "midPoint");
+                            String end = findVal(rMap, "DiemDen", "endPoint", "diemDen");
+                            
+                            String dist = unifyDistance(findVal(rMap, "QuangDuong", "distance"));
+                            String time = unifyTime(findVal(rMap, "ThoiGian", "time"));
+                            
+                            String status = findVal(rMap, "TrangThai", "status");
+
+                            routeList.add(new Route(id, name, start, mid, end, dist, time, status));
                         }
                     }
-                    Collections.sort(routeList, (r1, r2) -> getStatusPriority(r1.getStatus()) - getStatusPriority(r2.getStatus()));
-                    adapter.notifyDataSetChanged();
+                    sortAndNotify();
                 }
             }
-            @Override public void onFailure(Call<List<Route>> call, Throwable t) {}
+
+            private String findVal(Map<String, Object> m, String... keys) {
+                for (String k : keys) {
+                    if (m.containsKey(k) && m.get(k) != null) return m.get(k).toString();
+                }
+                return "";
+            }
+            @Override public void onFailure(Call<List<Map<String, Object>>> call, Throwable t) {}
         });
+    }
+
+    private String unifyDistance(String val) {
+        if (val == null || val.isEmpty()) return "";
+        String n = val.replaceAll("[^0-9,.]", "").replace(",", ".").trim();
+        if (n.isEmpty()) return val;
+        return n + " km";
+    }
+
+    private String unifyTime(String val) {
+        if (val == null || val.isEmpty()) return "";
+        if (val.contains("h")) {
+            String h = val.split("h")[0].trim();
+            return h + " giờ";
+        }
+        String n = val.replaceAll("[^0-9,.]", "").replace(".", ",").trim();
+        if (n.isEmpty()) return val;
+        return n + " giờ";
+    }
+
+    private void sortAndNotify() {
+        Collections.sort(routeList, (r1, r2) -> getStatusPriority(r1.getStatus()) - getStatusPriority(r2.getStatus()));
+        adapter.notifyDataSetChanged();
     }
 
     private int getStatusPriority(String status) {
@@ -144,15 +178,13 @@ public class QLTuyenxeActivity extends AppCompatActivity implements RouteAdapter
     private void setupEvents() {
         btnBack.setOnClickListener(v -> {
             if (inlineFormCard.getVisibility() == View.VISIBLE) {
-                String msg = (editingRoute == null) ? "Bạn có thông tin thêm mới chưa lưu, xác nhận hủy?" : "Bạn có thông tin chỉnh sửa chưa lưu, xác nhận hủy?";
-                showRouteConfirmDialog(msg, this::hideRouteForm);
-            } else finish();
+                showCancelConfirmationDialog(this::hideRouteForm);
+            } else backToHome();
         });
 
         btnAddRoute.setOnClickListener(v -> showRouteForm(null));
         btnCancelForm.setOnClickListener(v -> {
-            String msg = (editingRoute == null) ? "Bạn có thông tin thêm mới chưa lưu, xác nhận hủy?" : "Bạn có thông tin chỉnh sửa chưa lưu, xác nhận hủy?";
-            showRouteConfirmDialog(msg, this::hideRouteForm);
+            showCancelConfirmationDialog(this::hideRouteForm);
         });
         btnSaveForm.setOnClickListener(v -> validateAndSave());
 
@@ -203,10 +235,10 @@ public class QLTuyenxeActivity extends AppCompatActivity implements RouteAdapter
         }
 
         edtAutoDistance.setText(totalDist + " km");
-        edtAutoDistance.setTextColor(Color.parseColor("#333333"));
-        String timeStr = String.format("%.1f giờ", totalTime).replace(".0", "");
-        edtAutoTime.setText(timeStr);
-        edtAutoTime.setTextColor(Color.parseColor("#333333"));
+        edtAutoDistance.setTextColor(Color.BLACK);
+        String timeStr = String.format("%.1f", totalTime).replace(",", ".");
+        edtAutoTime.setText(timeStr + " giờ");
+        edtAutoTime.setTextColor(Color.BLACK);
     }
 
     private String deAccent(String str) {
@@ -230,48 +262,32 @@ public class QLTuyenxeActivity extends AppCompatActivity implements RouteAdapter
         return 0;
     }
 
-    private void setupNavigation() {
-        // 1. TRANG CHỦ
-        View navHome = findViewById(R.id.nav_home_op_main);
-        if (navHome != null) navHome.setOnClickListener(v -> {
-            startActivity(new Intent(this, OperatorMainActivity.class));
-            finish();
-        });
-
-        // 2. TÀI XẾ
-        View navDriver = findViewById(R.id.nav_driver_op);
-        if (navDriver != null) navDriver.setOnClickListener(v -> {
-            startActivity(new Intent(this, DriverSelectionActivity.class));
-            finish();
-        });
-
-        // 3. PHƯƠNG TIỆN
-        View navVehicle = findViewById(R.id.nav_vehicle_op);
-        if (navVehicle != null) navVehicle.setOnClickListener(v -> {
-            startActivity(new Intent(this, PhuongTienManagementActivity.class));
-            finish();
-        });
-
-        // 4. CHUYẾN XE
-        View navTrip = findViewById(R.id.nav_trip_op);
-        if (navTrip != null) navTrip.setOnClickListener(v -> {
-            startActivity(new Intent(this, TripListActivity.class));
-            finish();
-        });
-
-        // 5. TUYẾN XE (Đang ở đây, nhấn vào chỉ để refresh)
-        View navRoute = findViewById(R.id.nav_route_op);
-        if (navRoute != null) navRoute.setOnClickListener(v -> fetchRoutesFromApi());
+    private void backToHome() {
+        Intent intent = new Intent(this, OperatorMainActivity.class);
+        intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+        startActivity(intent);
+        finish();
     }
 
-    private void showRouteConfirmDialog(String message, Runnable onConfirm) {
-        View dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_delete_route, null);
-        TextView tvMsg = dialogView.findViewById(R.id.tvDialogMessageRoute);
-        if (tvMsg != null) tvMsg.setText(message);
-        AlertDialog dialog = new AlertDialog.Builder(this).setView(dialogView).create();
+    private void setupNavigation() {
+        View navHome = findViewById(R.id.nav_home_op_main);
+        if (navHome != null) navHome.setOnClickListener(v -> backToHome());
+    }
+
+    private void showCancelConfirmationDialog(Runnable onConfirm) {
+        View dv = getLayoutInflater().inflate(R.layout.dialog_confirm_cancel, null);
+        AlertDialog dialog = new AlertDialog.Builder(this).setView(dv).create();
         if (dialog.getWindow() != null) dialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
-        dialogView.findViewById(R.id.btnNoRoute).setOnClickListener(v -> dialog.dismiss());
-        dialogView.findViewById(R.id.btnYesRoute).setOnClickListener(v -> { dialog.dismiss(); onConfirm.run(); });
+
+        TextView tvMsg = dv.findViewById(R.id.tvDialogMessage);
+        if (tvMsg != null) tvMsg.setText("Bạn có thông tin chỉnh sửa chưa lưu,\nxác nhận hủy?");
+
+        dv.findViewById(R.id.btnNo).setOnClickListener(v -> dialog.dismiss());
+        dv.findViewById(R.id.btnYes).setOnClickListener(v -> {
+            dialog.dismiss();
+            onConfirm.run();
+        });
+
         dialog.show();
     }
 
@@ -291,10 +307,14 @@ public class QLTuyenxeActivity extends AppCompatActivity implements RouteAdapter
             edtStartPoint.setText(route.getStartPoint());
             edtMidPoint.setText(route.getMidPoint());
             edtEndPoint.setText(route.getEndPoint());
-            edtAutoDistance.setText(route.getDistance());
-            edtAutoDistance.setTextColor(Color.parseColor("#333333"));
-            edtAutoTime.setText(route.getTime());
-            edtAutoTime.setTextColor(Color.parseColor("#333333"));
+            
+            String dist = route.getDistance().replaceAll("[^0-9,.]", "").replace(",", ".");
+            edtAutoDistance.setText(dist + " km");
+            edtAutoDistance.setTextColor(Color.BLACK);
+            
+            String time = route.getTime().replaceAll("[^0-9,.]", "").replace(",", ".");
+            edtAutoTime.setText(time + " giờ");
+            edtAutoTime.setTextColor(Color.BLACK);
         }
     }
 
@@ -318,71 +338,201 @@ public class QLTuyenxeActivity extends AppCompatActivity implements RouteAdapter
         String name = edtRouteName.getText().toString().trim();
         String start = edtStartPoint.getText().toString().trim();
         String end = edtEndPoint.getText().toString().trim();
+        String distStr = edtAutoDistance.getText().toString().trim();
+        String timeStr = edtAutoTime.getText().toString().trim();
 
-        if (name.isEmpty()) { showFieldError(edtRouteName, tvErrorRouteName, "Vui lòng nhập tên tuyến xe."); isValid = false; }
-        else if (isSpecialCharStart(name)) { showFieldError(edtRouteName, tvErrorRouteName, "Tên tuyến xe không bắt đầu bằng ký tự đặc biệt."); isValid = false; }
-        if (start.isEmpty()) { showFieldError(edtStartPoint, tvErrorStartPoint, "Vui lòng nhập điểm đi."); isValid = false; }
-        else if (isSpecialCharStart(start)) { showFieldError(edtStartPoint, tvErrorStartPoint, "Điểm đi không bắt đầu bằng ký tự đặc biệt."); isValid = false; }
-        if (end.isEmpty()) { showFieldError(edtEndPoint, tvErrorEndPoint, "Vui lòng nhập điểm đến."); isValid = false; }
-        else if (isSpecialCharStart(end)) { showFieldError(edtEndPoint, tvErrorEndPoint, "Điểm đến không bắt đầu bằng ký tự đặc biệt."); isValid = false; }
+        if (name.isEmpty()) { 
+            showFieldError(edtRouteName, tvErrorRouteName, "Vui lòng nhập tên tuyến xe."); 
+            isValid = false; 
+        }
+
+        if (start.isEmpty()) { 
+            showFieldError(edtStartPoint, tvErrorStartPoint, "Vui lòng nhập điểm đi."); 
+            isValid = false; 
+        }
+
+        if (end.isEmpty()) { 
+            showFieldError(edtEndPoint, tvErrorEndPoint, "Vui lòng nhập điểm đến."); 
+            isValid = false; 
+        }
 
         if (!isValid) return;
 
         Map<String, String> data = new HashMap<>();
-        String routeId = (editingRoute == null) ? UUID.randomUUID().toString().substring(0, 8).toUpperCase() : editingRoute.getId();
-        data.put("tuyenXeID", routeId);
-        data.put("tenTuyen", name);
-        data.put("diemDi", start);
-        data.put("DiemTrungGian", edtMidPoint.getText().toString().trim());
-        data.put("diemDen", end);
-        data.put("QuangDuong", edtAutoDistance.getText().toString());
-        data.put("ThoiGian", edtAutoTime.getText().toString());
-        data.put("TrangThai", "Đang hoạt động");
+        data.put("tenTuyen", name); data.put("diemDi", start); data.put("DiemTrungGian", edtMidPoint.getText().toString());
+        data.put("diemDen", end); 
+        
+        String finalDist = distStr;
+        if (finalDist.isEmpty() || finalDist.equals("tự động")) finalDist = "0 km";
+        else if (!finalDist.contains(" km")) finalDist += " km";
+
+        String finalTime = timeStr;
+        if (finalTime.isEmpty() || finalTime.equals("tự động")) finalTime = "0 giờ";
+        else {
+            if (!finalTime.contains(" giờ")) finalTime += " giờ";
+            finalTime = finalTime.replace(".", ",");
+        }
+        
+        data.put("QuangDuong", finalDist);
+        data.put("ThoiGian", finalTime);
+        data.put("TrangThai", editingRoute != null ? editingRoute.getStatus() : "Đang hoạt động");
         data.put("nhaXe", opUid);
 
-        Call<Void> call = (editingRoute == null) ? apiService.createRoute(data) : apiService.updateRoute(editingRoute.getId(), data);
-        call.enqueue(new Callback<Void>() {
-            @Override public void onResponse(Call<Void> call, Response<Void> res) {
-                if (res.isSuccessful()) {
-                    showSuccessDialog((editingRoute == null) ? "Thêm tuyến xe thành công!" : "Cập nhật tuyến xe thành công!");
-                    hideRouteForm();
-                    fetchRoutesFromApi();
-                } else Toast.makeText(QLTuyenxeActivity.this, "Lỗi server: " + res.code(), Toast.LENGTH_SHORT).show();
+        if (editingRoute == null) {
+            String newId = generateNextRouteId();
+            data.put("tuyenXeID", newId);
+            apiService.createRoute(data).enqueue(new Callback<Void>() {
+                @Override public void onResponse(Call<Void> call, Response<Void> response) {
+                    if (response.isSuccessful()) {
+                        showRouteSuccessPopup("Thêm thông tin Tuyến xe thành công");
+                        hideRouteForm();
+                        fetchRoutesFromApi();
+                    }
+                }
+                @Override public void onFailure(Call<Void> call, Throwable t) {
+                    Toast.makeText(QLTuyenxeActivity.this, "Lỗi kết nối!", Toast.LENGTH_SHORT).show();
+                }
+            });
+        } else {
+            String id = editingRoute.getId();
+            data.put("tuyenXeID", id);
+            apiService.updateRoute(id, data).enqueue(new Callback<Void>() {
+                @Override public void onResponse(Call<Void> call, Response<Void> response) {
+                    if (response.isSuccessful()) {
+                        showRouteSuccessPopup("Cập nhật thông tin Tuyến xe thành công");
+                        hideRouteForm();
+                        fetchRoutesFromApi();
+                    }
+                }
+                @Override public void onFailure(Call<Void> call, Throwable t) {
+                    Toast.makeText(QLTuyenxeActivity.this, "Lỗi kết nối!", Toast.LENGTH_SHORT).show();
+                }
+            });
+        }
+    }
+
+    private String generateNextRouteId() {
+        int maxNum = 0;
+        if (routeList != null) {
+            for (Route r : routeList) {
+                String id = r.getId();
+                if (id != null && id.startsWith("TX")) {
+                    try {
+                        int num = Integer.parseInt(id.substring(2));
+                        if (num > maxNum) maxNum = num;
+                    } catch (Exception ignored) {}
+                }
             }
-            @Override public void onFailure(Call<Void> call, Throwable t) { Toast.makeText(QLTuyenxeActivity.this, "Lỗi mạng!", Toast.LENGTH_SHORT).show(); }
-        });
+        }
+        return String.format("TX%05d", maxNum + 1);
     }
 
-    private boolean isSpecialCharStart(String s) { return s != null && !s.isEmpty() && !Character.isLetterOrDigit(s.charAt(0)); }
-    private void showFieldError(EditText edt, TextView tvErr, String msg) { edt.setBackgroundResource(R.drawable.bg_input_error); tvErr.setText(msg); tvErr.setVisibility(View.VISIBLE); }
-    private void clearErrors() {
-        edtRouteName.setBackgroundResource(R.drawable.bg_input_gray_rounded); tvErrorRouteName.setVisibility(View.GONE);
-        edtStartPoint.setBackgroundResource(R.drawable.bg_input_gray_rounded); tvErrorStartPoint.setVisibility(View.GONE);
-        edtEndPoint.setBackgroundResource(R.drawable.bg_input_gray_rounded); tvErrorEndPoint.setVisibility(View.GONE);
-    }
-
-    private void showSuccessDialog(String msg) {
+    private void showRouteSuccessPopup(String msg) {
         View dv = getLayoutInflater().inflate(R.layout.dialog_route_success, null);
         TextView tvMsg = dv.findViewById(R.id.tvRouteSuccessMessage);
         if (tvMsg != null) tvMsg.setText(msg);
-        AlertDialog d = new AlertDialog.Builder(this).setView(dv).create();
-        if (d.getWindow() != null) d.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
-        d.show();
-        new Handler().postDelayed(d::dismiss, 2000);
+
+        AlertDialog dialog = new AlertDialog.Builder(this).setView(dv).create();
+        if (dialog.getWindow() != null) dialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+        dialog.show();
+        new Handler().postDelayed(dialog::dismiss, 1500);
     }
 
-    @Override public void onEdit(Route route) { showRouteForm(route); }
-    @Override public void onDelete(Route route) {
-        showRouteConfirmDialog("Bạn có chắc chắn muốn xóa tuyến xe " + route.getName() + " này không?", () -> {
-            apiService.deleteRoute(route.getId()).enqueue(new Callback<Void>() {
-                @Override public void onResponse(Call<Void> call, Response<Void> res) { if (res.isSuccessful()) { Toast.makeText(QLTuyenxeActivity.this, "Đã xóa!", Toast.LENGTH_SHORT).show(); fetchRoutesFromApi(); } }
-                @Override public void onFailure(Call<Void> call, Throwable t) {}
-            });
+    private void showFieldError(EditText edt, TextView tvError, String msg) {
+        tvError.setText(msg);
+        tvError.setVisibility(View.VISIBLE);
+        edt.setBackgroundResource(R.drawable.bg_input_error);
+    }
+
+    private void clearErrors() {
+        tvErrorRouteName.setVisibility(View.GONE);
+        tvErrorStartPoint.setVisibility(View.GONE);
+        tvErrorEndPoint.setVisibility(View.GONE);
+        edtRouteName.setBackgroundResource(R.drawable.bg_input_white);
+        edtStartPoint.setBackgroundResource(R.drawable.bg_input_white);
+        edtEndPoint.setBackgroundResource(R.drawable.bg_input_white);
+    }
+
+    @Override
+    public void onEdit(Route route) {
+        showRouteForm(route);
+    }
+
+    @Override
+    public void onDelete(Route route) {
+        View dv = getLayoutInflater().inflate(R.layout.dialog_delete_route, null);
+        AlertDialog dialog = new AlertDialog.Builder(this).setView(dv).create();
+        if (dialog.getWindow() != null) dialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+
+        dv.findViewById(R.id.btnNoRoute).setOnClickListener(v -> dialog.dismiss());
+        dv.findViewById(R.id.btnYesRoute).setOnClickListener(v -> {
+            dialog.dismiss();
+            if (route.getStatus().equals("Đang hoạt động") || route.getStatus().equals("Bảo trì")) {
+                showErrorPopup("Không thể xóa tuyến xe,\ncó chuyến đang hoạt động");
+            } else {
+                apiService.deleteRoute(route.getId()).enqueue(new Callback<Void>() {
+                    @Override
+                    public void onResponse(Call<Void> call, Response<Void> response) {
+                        if (response.isSuccessful()) {
+                            showRouteSuccessPopup("Xóa Tuyến xe thành công");
+                            routeList.remove(route);
+                            adapter.notifyDataSetChanged();
+                        }
+                    }
+                    @Override public void onFailure(Call<Void> call, Throwable t) {}
+                });
+            }
         });
+
+        dialog.show();
+    }
+
+    private void showErrorPopup(String msg) {
+        View dv = getLayoutInflater().inflate(R.layout.dialog_delete_error, null);
+        TextView tvMsg = dv.findViewById(R.id.tvErrorMessage);
+        if (tvMsg != null) tvMsg.setText(msg);
+        AlertDialog dialog = new AlertDialog.Builder(this).setView(dv).create();
+        if (dialog.getWindow() != null) dialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+        dialog.show();
+        new Handler().postDelayed(dialog::dismiss, 2000);
     }
 
     @Override
     public void onStatusChange(Route route) {
-        // Xử lý đổi trạng thái nếu cần
+        View dv = getLayoutInflater().inflate(R.layout.dialog_status_selection, null);
+        AlertDialog dialog = new AlertDialog.Builder(this).setView(dv).create();
+        if (dialog.getWindow() != null) dialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+
+        dv.findViewById(R.id.btnStatusActive).setOnClickListener(v -> updateStatus(route, "Đang hoạt động", dialog));
+        dv.findViewById(R.id.btnStatusMaintain).setOnClickListener(v -> updateStatus(route, "Bảo trì", dialog));
+        dv.findViewById(R.id.btnStatusStop).setOnClickListener(v -> updateStatus(route, "Ngưng hoạt động", dialog));
+
+        dialog.show();
+    }
+
+    private void updateStatus(Route route, String status, AlertDialog dialog) {
+        dialog.dismiss();
+        
+        Map<String, String> data = new HashMap<>();
+        data.put("tuyenXeID", route.getId());
+        data.put("tenTuyen", route.getName());
+        data.put("diemDi", route.getStartPoint());
+        data.put("DiemTrungGian", route.getMidPoint() != null ? route.getMidPoint() : "");
+        data.put("diemDen", route.getEndPoint());
+        data.put("QuangDuong", route.getDistance());
+        data.put("ThoiGian", route.getTime());
+        data.put("TrangThai", status);
+        data.put("nhaXe", opUid);
+
+        apiService.updateRoute(route.getId(), data).enqueue(new Callback<Void>() {
+            @Override public void onResponse(Call<Void> call, Response<Void> response) {
+                if (response.isSuccessful()) {
+                    route.setStatus(status);
+                    sortAndNotify();
+                    showRouteSuccessPopup("Cập nhật trạng thái thành công");
+                }
+            }
+            @Override public void onFailure(Call<Void> call, Throwable t) {}
+        });
     }
 }

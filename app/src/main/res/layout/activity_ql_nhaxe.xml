@@ -69,8 +69,8 @@
 
                             <de.hdodenhof.circleimageview.CircleImageView
                                 android:id="@+id/imgLogo"
-                                android:layout_width="85dp"
-                                android:layout_height="85dp"
+                                android:layout_width="120dp"
+                                android:layout_height="120dp"
                                 android:layout_gravity="center_horizontal"
                                 android:src="@drawable/logo" />
 
@@ -81,19 +81,20 @@
                                 android:gravity="center"
                                 android:text="Nhà xe Đà Nẵng-Huế"
                                 android:textColor="@android:color/black"
-                                android:textSize="18sp"
+                                android:textSize="22sp"
                                 android:textStyle="bold"
-                                android:layout_marginTop="10dp"/>
+                                android:layout_marginTop="15dp"/>
 
                             <TextView
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
                                 android:gravity="center"
                                 android:text="“Kết nối hành trình di sản”"
-                                android:textColor="#444444"
-                                android:textSize="14sp"
+                                android:textColor="@android:color/black"
+                                android:textSize="22sp"
                                 android:textStyle="bold"
-                                android:layout_marginBottom="15dp"/>
+                                android:layout_marginTop="5dp"
+                                android:layout_marginBottom="25dp"/>
 
                             <!-- Rows for Info -->
                             <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:layout_marginTop="10dp">
@@ -164,6 +165,9 @@
                         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Số điện thoại" android:textSize="12sp" android:layout_marginTop="10dp"/>
                         <EditText android:id="@+id/edtPhone" android:layout_width="match_parent" android:layout_height="45dp" android:background="@drawable/bg_input_white" android:paddingHorizontal="10dp" android:layout_marginTop="4dp" android:inputType="phone"/>
                         <TextView android:id="@+id/tvErrorPhone" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Lỗi" android:textColor="#F44336" android:textSize="11sp" android:visibility="gone"/>
+
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Email" android:textSize="12sp" android:layout_marginTop="10dp"/>
+                        <EditText android:id="@+id/edtEmail" android:layout_width="match_parent" android:layout_height="45dp" android:background="@drawable/bg_input_white" android:paddingHorizontal="10dp" android:layout_marginTop="4dp" android:inputType="textEmailAddress"/>
 
                         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Hình ảnh nhà xe" android:textSize="14sp" android:layout_marginTop="15dp"/>
                         <LinearLayout

@@ -6,7 +6,6 @@ import com.example.nhom7vexeapp.models.Loaixe;
 import com.example.nhom7vexeapp.models.Seat;
 import com.example.nhom7vexeapp.models.Ticket;
 import com.example.nhom7vexeapp.models.Trip;
-import com.example.nhom7vexeapp.models.TripResponse;
 import com.example.nhom7vexeapp.models.TripSearchResult;
 import com.example.nhom7vexeapp.models.TaixeModel;
 import com.example.nhom7vexeapp.models.ChiTietTaiXeModel;
@@ -159,6 +158,9 @@ public interface ApiService {
     @GET("api/ve/")
     Call<List<Map<String, Object>>> getTicketsByTrip(@Query("ChuyenXe") String tripId);
 
+    @GET("api/ve/")
+    Call<List<Map<String, Object>>> getAllTickets();
+
     @PATCH("api/ve/{id}/")
     Call<Void> patchTicket(@Path("id") String id, @Body Map<String, Object> data);
 
@@ -190,6 +192,9 @@ public interface ApiService {
     Call<List<Map<String, Object>>> getKhachHangList();
 
     @POST("api/khachhang/")
+    Call<KhachHang> register(@Body Map<String, String> data);
+
+    @POST("api/khachhang/")
     Call<Void> createKhachHangProfile(@Body Map<String, String> data);
 
     @Multipart
@@ -207,9 +212,6 @@ public interface ApiService {
 
     @GET("api/khachhang/{id}/")
     Call<KhachHang> getProfile(@Path("id") String id);
-
-    @POST("api/khachhang/")
-    Call<KhachHang> register(@Body Map<String, String> body);
 
     @PUT("api/khachhang/{id}/")
     Call<Void> updateKhachHang(@Path("id") String id, @Body Map<String, String> data);
@@ -250,4 +252,11 @@ public interface ApiService {
 
     @PUT("api/loaixe/{id}/")
     Call<Loaixe> updateLoaixe(@Path("id") String id, @Body Loaixe loaixe);
+
+    // --- 10. ĐÁNH GIÁ (FEEDBACK) ---
+    @GET("api/danhgia/")
+    Call<List<Map<String, Object>>> getFeedbacks();
+
+    @POST("api/danhgia/")
+    Call<Void> sendFeedback(@Body Map<String, Object> data);
 }

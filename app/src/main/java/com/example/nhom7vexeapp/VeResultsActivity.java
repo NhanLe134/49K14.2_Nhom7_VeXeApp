@@ -20,6 +20,7 @@ import com.example.nhom7vexeapp.api.ApiService;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
@@ -90,12 +91,9 @@ public class VeResultsActivity extends AppCompatActivity {
             public void onResponse(Call<List<TripSearchResult>> call, Response<List<TripSearchResult>> response) {
                 if (response.isSuccessful() && response.body() != null) {
                     List<TripSearchResult> allTrips = response.body();
-                    // Sau khi lấy danh sách chuyến, tiến hành lấy danh sách ghế để tính toán số chỗ trống thực tế
                     fetchSeatsAndUpdateCounts(allTrips, origin, destination, date, time);
                 } else {
                     if (progressBar != null) progressBar.setVisibility(View.GONE);
-                    Log.e("API_ERROR", "Response Code: " + response.code());
-                    Toast.makeText(VeResultsActivity.this, "Lỗi khi lấy dữ liệu!", Toast.LENGTH_SHORT).show();
                     showNoResults();
                 }
             }
@@ -103,14 +101,12 @@ public class VeResultsActivity extends AppCompatActivity {
             @Override
             public void onFailure(Call<List<TripSearchResult>> call, Throwable t) {
                 if (progressBar != null) progressBar.setVisibility(View.GONE);
-                Toast.makeText(VeResultsActivity.this, "Lỗi kết nối server!", Toast.LENGTH_LONG).show();
                 showNoResults();
             }
         });
     }
 
     private void fetchSeatsAndUpdateCounts(List<TripSearchResult> allTrips, String origin, String destination, String date, String time) {
-        // Lấy tất cả ghế ngồi để lọc theo từng chuyến xe
         apiService.getSeatsByTrip(null).enqueue(new Callback<List<Seat>>() {
             @Override
             public void onResponse(Call<List<Seat>> call, Response<List<Seat>> response) {
@@ -122,24 +118,20 @@ public class VeResultsActivity extends AppCompatActivity {
                         int emptyCount = 0;
                         String tripId = trip.getId();
                         for (Seat seat : allSeats) {
-                            // So khớp ID chuyến xe và kiểm tra trạng thái "Còn trống"
                             if (tripId != null && tripId.equals(seat.getChuyenXe()) 
                                     && "Còn trống".equalsIgnoreCase(seat.getStatus())) {
                                 emptyCount++;
                             }
                         }
-                        // Cập nhật số chỗ trống thực tế vào đối tượng chuyến xe
                         trip.setSeats(emptyCount);
                     }
                 }
-                // Tiến hành lọc và hiển thị danh sách
                 applySmartFilter(allTrips, origin, destination, date, time);
             }
 
             @Override
             public void onFailure(Call<List<Seat>> call, Throwable t) {
                 if (progressBar != null) progressBar.setVisibility(View.GONE);
-                // Nếu lỗi khi lấy ghế, vẫn hiển thị danh sách với số liệu mặc định từ server
                 applySmartFilter(allTrips, origin, destination, date, time);
             }
         });
@@ -155,32 +147,51 @@ public class VeResultsActivity extends AppCompatActivity {
         String nowStrTime = sdfTime.format(new Date());
         String formattedSearchDate = convertDateFormat(sDate);
 
+        List<TripSearchResult> tier1 = new ArrayList<>(); // Đúng tuyến + Đúng ngày + Đúng giờ
+        List<TripSearchResult> tier2 = new ArrayList<>(); // Đúng tuyến + Đúng ngày (mọi giờ)
+        List<TripSearchResult> tier3 = new ArrayList<>(); // Đúng tuyến + Các ngày sau
+        List<TripSearchResult> tier4 = new ArrayList<>(); // Đúng tuyến (Tất cả tương lai)
+
         for (TripSearchResult trip : allTrips) {
-            // Lọc trạng thái: Chỉ lấy những chuyến "Chưa hoàn thành"
-            String status = trip.getStatus();
-            if (status != null && !status.equalsIgnoreCase("Chưa hoàn thành")) {
+            if (trip.getStatus() != null && !trip.getStatus().equalsIgnoreCase("Chưa hoàn thành")) {
                 continue;
             }
 
             String tripDate = trip.getDate() != null ? trip.getDate() : "";
             String tripTime = trip.getTime() != null ? trip.getTime() : "00:00";
 
-            // Lọc thời gian thực tế: Không hiển thị chuyến trong quá khứ
+            // Bỏ qua chuyến trong quá khứ
             if (tripDate.compareTo(nowStrDate) < 0) continue;
             if (tripDate.equals(nowStrDate) && tripTime.compareTo(nowStrTime) < 0) continue;
 
-            boolean matchOrigin = sOrigin.equals("Tất cả") || (trip.getTuyenXeName() != null && trip.getTuyenXeName().contains(sOrigin));
-            boolean matchDest = sDest.equals("Tất cả") || (trip.getTuyenXeName() != null && trip.getTuyenXeName().contains(sDest));
-            boolean matchDate = (sDate == null || sDate.isEmpty()) || tripDate.equals(formattedSearchDate);
+            if (checkRouteMatch(trip, sOrigin, sDest)) {
+                boolean matchDate = (sDate == null || sDate.isEmpty()) || tripDate.equals(formattedSearchDate);
+                boolean matchTime = (sTime == null || sTime.isEmpty()) || isWithinThreeHours(tripTime, sTime);
 
-            boolean matchTime = true;
-            if (sTime != null && !sTime.isEmpty()) {
-                matchTime = isWithinThreeHours(tripTime, sTime);
+                if (matchDate) {
+                    if (matchTime) tier1.add(trip);
+                    tier2.add(trip);
+                } else if (!sDate.isEmpty() && tripDate.compareTo(formattedSearchDate) > 0) {
+                    tier3.add(trip);
+                }
+                tier4.add(trip);
             }
+        }
 
-            if (matchOrigin && matchDest && matchDate && matchTime) {
-                tripList.add(trip);
-            }
+        // Ưu tiên hiển thị theo cấp độ
+        if (!tier1.isEmpty()) {
+            tripList.addAll(tier1);
+        } else if (!tier2.isEmpty() && sTime != null && !sTime.isEmpty()) {
+            tripList.addAll(tier2);
+            Toast.makeText(this, "Không có chuyến vào khung giờ " + sTime + ". Hiển thị các chuyến khác cùng ngày.", Toast.LENGTH_LONG).show();
+        } else if (!tier3.isEmpty() && sDate != null && !sDate.isEmpty()) {
+            tripList.addAll(tier3);
+            Collections.sort(tripList, (t1, t2) -> t1.getDate().compareTo(t2.getDate()));
+            Toast.makeText(this, "Ngày " + sDate + " không có chuyến. Hiển thị các ngày tiếp theo.", Toast.LENGTH_LONG).show();
+        } else if (!tier4.isEmpty()) {
+            tripList.addAll(tier4);
+            Collections.sort(tripList, (t1, t2) -> t1.getDate().compareTo(t2.getDate()));
+            Toast.makeText(this, "Không tìm thấy chuyến phù hợp yêu cầu. Hiển thị tất cả chuyến cùng tuyến.", Toast.LENGTH_LONG).show();
         }
 
         adapter.notifyDataSetChanged();
@@ -189,6 +200,37 @@ public class VeResultsActivity extends AppCompatActivity {
         } else {
             tvNoResult.setVisibility(View.GONE);
         }
+    }
+
+    private boolean checkRouteMatch(TripSearchResult trip, String sOrigin, String sDest) {
+        String routeName = trip.getTuyenXeName();
+        if (routeName == null) return sOrigin.equals("Tất cả") && sDest.equals("Tất cả");
+
+        String cleanRoute = routeName.replace("Tuyến:", "").replace("Tuyến", "").toLowerCase().trim();
+        String searchOrigin = sOrigin.toLowerCase().trim();
+        String searchDest = sDest.toLowerCase().trim();
+
+        if (cleanRoute.contains("-")) {
+            String[] parts = cleanRoute.split("-");
+            if (parts.length >= 2) {
+                String tOrigin = parts[0].trim();
+                String tDest = parts[1].trim();
+
+                boolean originOk = sOrigin.equals("Tất cả") || tOrigin.contains(searchOrigin);
+                boolean destOk = sDest.equals("Tất cả") || tDest.contains(searchDest);
+                return originOk && destOk;
+            }
+        }
+
+        if (!sOrigin.equals("Tất cả") && !sDest.equals("Tất cả")) {
+             int originIdx = cleanRoute.indexOf(searchOrigin);
+             int destIdx = cleanRoute.indexOf(searchDest);
+             return originIdx != -1 && destIdx != -1 && originIdx < destIdx;
+        }
+
+        boolean matchOrigin = sOrigin.equals("Tất cả") || cleanRoute.contains(searchOrigin);
+        boolean matchDest = sDest.equals("Tất cả") || cleanRoute.contains(searchDest);
+        return matchOrigin && matchDest;
     }
 
     private void showNoResults() {
